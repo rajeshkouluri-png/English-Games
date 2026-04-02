@@ -1,0 +1,321 @@
+﻿<div id="raj-lms-outer-wrapper" style="all: initial;">
+    <div id="lms-game-body" style="font-family: 'Segoe UI', Arial, sans-serif; background: #f0f8ff; padding: 20px 10px; display: flex; justify-content: center; width: 100%;">
+        
+        <style>
+            #lms-container {
+                background: white; width: 100%; max-width: 550px; border: 4px solid #4CAF50; border-radius: 20px;
+                padding: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; min-height: 600px;
+            }
+            .stage-label { background: #2196f3; color: white; padding: 8px 30px; border-radius: 50px; display: inline-block; font-weight: bold; margin-bottom: 12px; font-size: 24px; }
+            .instr-label { background: #ffeb3b; color: #333; padding: 10px 20px; border-radius: 8px; display: inline-block; font-weight: 700; margin-bottom: 25px; font-size: 18px; border: 2px solid #fbc02d; }
+            .hidden { display: none !important; }
+            
+            .options-area { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px; }
+            .word-choice { width: 80%; padding: 15px; font-size: 20px; font-weight: bold; border: 2px solid #2196f3; border-radius: 12px; background: white; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 0 #2196f3; }
+            .word-choice:active { transform: translateY(2px); box-shadow: 0 2px 0 #2196f3; }
+
+            .alphabet-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 15px 0; }
+            .letter-card { flex: 0 0 20%; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: #e3f2fd; border: 2px solid #2196f3; border-radius: 10px; cursor: pointer; }
+
+            .fill-row-container { display: flex; flex-direction: column; gap: 12px; text-align: left; margin: 25px auto; max-width: 350px; }
+            .body-row { font-size: 22px; font-weight: bold; padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center; cursor: pointer; }
+            .row-num { color: #2196f3; margin-right: 12px; font-size: 16px; min-width: 20px; }
+            
+            .drop-zone { display: inline-block; width: 35px; height: 35px; border-bottom: 4px solid #2196f3; background: #f5f5f5; vertical-align: middle; text-align: center; margin: 0 5px; line-height: 35px; transition: 0.3s; border-radius: 4px 4px 0 0; }
+            .drop-zone.active { background: #fffde7; border-color: #ffeb3b; box-shadow: 0 0 8px #ffeb3b; }
+            .drop-zone.correct-fill { background: #e8f5e9; border-color: #4CAF50; color: #2E7D32; }
+            .drop-zone.wrong-fill { background: #ffebee; border-color: #f44336; color: #d32f2f; }
+
+            .star-icon { color: #ffc107; font-size: 60px; margin: 0 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+            .score-msg { font-size: 36px; font-weight: bold; color: #2E7D32; margin: 20px 0; }
+            
+            .audio-icon { background: #ff9800; border: none; width: 55px; height: 55px; border-radius: 50%; font-size: 28px; cursor: pointer; box-shadow: 0 4px 0 #e68a00; }
+            .mic-btn { font-size: 55px; background: none; border: none; cursor: pointer; transition: 0.2s; }
+            .word-token { padding: 12px 18px; background: white; border: 2px solid #2196f3; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #2196f3; font-size: 18px; }
+            .sentence-box { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0; padding: 20px; background: #f9f9f9; border-radius: 15px; min-height: 60px; border: 2px dashed #ccc; }
+            .verify-btn { background: #ff9800; color: white; border: none; padding: 15px 35px; font-size: 20px; border-radius: 12px; cursor: pointer; margin: 15px 0; font-weight: bold; box-shadow: 0 4px 0 #e68a00; }
+            .hint-img { width: 140px; height: 140px; object-fit: contain; margin-bottom: 10px; border: 3px solid #4CAF50; border-radius: 15px; padding: 5px; background: white; }
+        </style>
+
+        <div id="lms-container">
+            <div id="start-screen">
+                <h2 id="start-title">Lesson Title</h2>
+                <button style="background:#4CAF50; color:white; border:none; padding:15px 30px; font-size:22px; border-radius:10px; cursor:pointer; font-weight:bold;" onclick="startGame()">Start Lesson ▶</button>
+            </div>
+
+            <div id="game-ui" class="hidden">
+                <div id="header-labels">
+                    <div class="stage-label" id="stage-text">Stage</div><br>
+                    <div class="instr-label" id="instr-text">Instruction</div>
+                </div>
+
+                <div id="s1-area" class="stage-div">
+                    <button class="audio-icon" onclick="replayAudio()">🔊</button>
+                    <div class="alphabet-grid" id="alphabet-grid"></div>
+                </div>
+
+                <div id="s2-area" class="stage-div hidden">
+                    <p style="font-weight:bold; color:#555; font-size: 18px;">Which word rhymes with: <span id="s2-target-word" style="color:#d84315; border-bottom: 2px solid;">...</span>?</p>
+                    <div class="options-area" id="rhyme-options"></div>
+                </div>
+
+                <div id="s3-area" class="stage-div hidden">
+                    <p style="font-weight:bold; color:#555; font-size: 18px;">Listen and pick the correct word:</p>
+                    <button class="audio-icon" onclick="replayAudio()">🔊</button>
+                    <div class="options-area" id="sight-options"></div>
+                </div>
+
+                <div id="s4-area" class="stage-div hidden">
+                    <div style="font-size:32px; font-weight:bold; color:#d84315; padding:25px; background:#fff3e0; border-radius:15px; margin:15px 0; border: 2px solid #ffccbc;" id="read-display">...</div>
+                    <button id="mic-btn" class="mic-btn" onclick="startReadingAI()">🎤</button>
+                    <div id="read-feedback" style="margin-top:10px; font-weight:bold; color: #2E7D32; font-size: 20px;"></div>
+                </div>
+
+                <div id="s5-area" class="stage-div hidden">
+                    <div class="fill-row-container" id="english-body-grid"></div>
+                    <button id="s5-verify-btn" class="verify-btn hidden" onclick="verifyS5()">Verify Answers</button>
+                    <p id="s5-hint" style="font-weight:bold; color:#666; font-size:14px; margin-top:10px;">Select a gap, then pick a letter:</p>
+                    <div class="alphabet-grid" id="s5-letter-bank"></div>
+                </div>
+
+                <div id="s6-area" class="stage-div hidden">
+                    <img id="s6-hint-image" class="hint-img" src="" alt="Hint">
+                    <div class="sentence-box" id="s6-slots"></div>
+                    <div class="sentence-box" id="s6-bank" style="background:#e8f5e9; border-color:#4CAF50;"></div>
+                </div>
+
+                <div id="result-screen" class="hidden">
+                    <div id="final-content">
+                        <h2 style="font-size: 32px; color: #333;">Lesson Finished!</h2>
+                        <div id="star-display"></div>
+                        <div id="score-msg" class="score-msg"></div>
+                        <button style="background:#4CAF50; color:white; border:none; padding:15px 30px; font-size:20px; border-radius:10px; cursor:pointer; margin-top: 20px; font-weight:bold;" onclick="location.reload()">Try Again 🔄</button>
+                    </div>
+                </div>
+
+                <button id="next-stage-btn" style="background:#4CAF50; color:white; border:none; padding:12px 25px; font-size:18px; border-radius:8px; cursor:pointer; margin-top:20px; font-weight:bold;" class="hidden" onclick="moveNext()">Next Stage >></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* =========================================
+       LESSON CONFIGURATION: "Animals"
+       ========================================= */
+    const lessonConfig = {
+        title: "9. My Animal Friends",
+        alphabet: ['L', 'I', 'O', 'N', 'G', 'A'], 
+        rhymes: [
+            {target: "kid", correct: "hid", wrong: ["win", "lip"]},
+            {target: "fin", correct: "win", wrong: ["sit", "hid"]},
+            {target: "sip", correct: "lip", wrong: ["hit", "win"]},
+            {target: "sit", correct: "hit", wrong: ["lip", "fin"]}
+        ],
+        sightWords: ["in", "on", "can", "we", "for"],
+        readingWords: ["lion", "goat", "elephant", "monkey"],
+        readingSentences: [
+            "I am monkey.", 
+            "I can jump.", 
+            "They are tigers.", 
+            "This is a forest."
+        ],
+        bodyPartsBlanks: [
+            { word: "lion", prefix: "li", suffix: "n", missing: "o", id: 1 },
+            { word: "goat", prefix: "go", suffix: "t", missing: "a", id: 2 },
+            { word: "tiger", prefix: "tig", suffix: "r", missing: "e", id: 3 },
+            { word: "monkey", prefix: "monk", suffix: "y", missing: "e", id: 4 },
+            { word: "zebra", prefix: "ze", suffix: "ra", missing: "b", id: 5 },
+            { word: "bear", prefix: "be", suffix: "r", missing: "a", id: 6 }
+        ],
+        bodyOptions: ["o", "a", "e", "b", "i", "u", "s", "m"],
+        unscrambleSentences: [
+            { text: "The cow is drinking.", img: "https://blogger.googleusercontent.com/img/a/AVvXsEhvmntWvpbezovY3biIJdMJ4B43PDG2E1K9y2NDkJH-aSQqWDAVy7TwtU6OTvq4zj5615oYWS_YJodFJ131f6IWMF80QD_OPTiMb4JsNMKyYHCf1lJ8heHf9l4Lgjr-kN8ChPGgDBaT_rEUZnptUTZIPl3c9Ot1nXDZ4-ZLUKrnqk4rN4C3KYiSh3FaEqIt" },
+            { text: "The tiger is yellow.", img: "https://blogger.googleusercontent.com/img/a/AVvXsEjwUZN092B_zaqFNus5AmZ6LO4P5ngDAoq7wpVaTJCqyMhqqZ-HCFSlFJnZX6ymXxaH9YzvqmmQVO7DbO6zbTz2gEvax11lnj521dVva2MQhB_JgAAq2J3ZUWkzkVNAfNZzWDX2KP7JGBl9OYOjdiTAT_elYCTFWzW-UMyewwov3r8iep8os4jGKoWRopQI" }
+        ]
+    };
+
+    /* =========================================
+       GAME LOGIC
+       ========================================= */
+    let currentStage = 1, s1Idx = 0, s2Idx = 0, s3Idx = 0, s4Idx = 0, s5SelectedId = null, s6Idx = 0;
+    let s1Q, s2Q, s3Q, s4Q, s5Q, s6Q, wrongClicks = 0, voiceTarget = "";
+
+    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+    function speak(t) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.rate = 0.8; voiceTarget = t; window.speechSynthesis.speak(u); }
+    function replayAudio() { speak(voiceTarget); }
+
+    window.onload = () => { document.getElementById('start-title').innerText = lessonConfig.title; };
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-ui').classList.remove('hidden');
+        s1Q = [...lessonConfig.alphabet]; 
+        s2Q = shuffle([...lessonConfig.rhymes]);
+        s3Q = shuffle([...lessonConfig.sightWords]);
+        s4Q = [...shuffle([...lessonConfig.readingWords]), ...shuffle([...lessonConfig.readingSentences])];
+        s5Q = shuffle(lessonConfig.bodyPartsBlanks.map(item => ({...item, currentVal: "", status: "empty"})));
+        s6Q = shuffle([...lessonConfig.unscrambleSentences]);
+        moveNext(true);
+    }
+
+    function loadS1() {
+        const grid = document.getElementById('alphabet-grid');
+        if(s1Idx >= s1Q.length) { grid.innerHTML = "<h3>Well Done!</h3>"; document.getElementById('next-stage-btn').classList.remove('hidden'); return; }
+        let isUpper = s1Idx < 3;
+        let target = isUpper ? s1Q[s1Idx].toUpperCase() : s1Q[s1Idx].toLowerCase();
+        grid.innerHTML = '';
+        shuffle([...lessonConfig.alphabet]).forEach(l => {
+            let displayLetter = isUpper ? l.toUpperCase() : l.toLowerCase();
+            let d = document.createElement('div'); d.className = 'letter-card'; d.innerText = displayLetter;
+            d.onclick = () => { if(displayLetter === target) { d.style.background = "#c8e6c9"; s1Idx++; setTimeout(loadS1, 800); } else { d.style.background = "#ffcdd2"; wrongClicks++; }};
+            grid.appendChild(d);
+        });
+        speak(target);
+    }
+
+    function loadS2() {
+        const area = document.getElementById('rhyme-options');
+        const targetLabel = document.getElementById('s2-target-word');
+        if(s2Idx >= s2Q.length) { area.innerHTML = "<h3>Great!</h3>"; document.getElementById('next-stage-btn').classList.remove('hidden'); return; }
+        let r = s2Q[s2Idx]; area.innerHTML = ''; targetLabel.innerText = r.target.toUpperCase();
+        shuffle([r.correct, ...r.wrong]).forEach(o => {
+            let b = document.createElement('button'); b.className = 'word-choice'; b.innerText = o;
+            b.onclick = () => { if(o === r.correct) { b.style.background = "#c8e6c9"; s2Idx++; setTimeout(loadS2, 1000); } else { b.style.background = "#ffcdd2"; wrongClicks++; }};
+            area.appendChild(b);
+        });
+        speak(r.target);
+    }
+
+    function loadS3() {
+        const area = document.getElementById('sight-options');
+        if(s3Idx >= s3Q.length) { area.innerHTML = "<h3>Perfect!</h3>"; document.getElementById('next-stage-btn').classList.remove('hidden'); return; }
+        let target = s3Q[s3Idx]; area.innerHTML = '';
+        let choices = shuffle([target, ...lessonConfig.sightWords.filter(w => w !== target).slice(0, 2)]);
+        choices.forEach(w => {
+            let b = document.createElement('button'); b.className = 'word-choice'; b.innerText = w;
+            b.onclick = () => { if(w === target) { b.style.background = "#c8e6c9"; s3Idx++; setTimeout(loadS3, 1000); } else { b.style.background = "#ffcdd2"; wrongClicks++; }};
+            area.appendChild(b);
+        });
+        speak(target);
+    }
+
+    function loadS4() {
+        if(s4Idx >= s4Q.length) { document.getElementById('read-display').innerText = "Done!"; document.getElementById('next-stage-btn').classList.remove('hidden'); return; }
+        document.getElementById('read-display').innerText = s4Q[s4Idx];
+        document.getElementById('read-feedback').innerText = "";
+    }
+
+    function startReadingAI() {
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(!Speech) return alert("Browser not supported.");
+        const rec = new Speech();
+        rec.onstart = () => document.getElementById('mic-btn').style.opacity = "0.5";
+        rec.onresult = (e) => {
+            let say = e.results[0][0].transcript.toLowerCase();
+            let target = s4Q[s4Idx].toLowerCase().replace(/[.!]/g,"");
+            if(say.includes(target) || target.includes(say)) { document.getElementById('read-feedback').innerText = "Correct! 🌟"; s4Idx++; setTimeout(loadS4, 1000); }
+        };
+        rec.onend = () => document.getElementById('mic-btn').style.opacity = "1";
+        rec.start();
+    }
+
+    function loadS5() {
+        const grid = document.getElementById('english-body-grid');
+        const bank = document.getElementById('s5-letter-bank');
+        const verifyBtn = document.getElementById('s5-verify-btn');
+        grid.innerHTML = ''; bank.innerHTML = '';
+        s5Q.forEach((item, index) => {
+            let row = document.createElement('div'); row.className = 'body-row';
+            let statusClass = item.status === "correct" ? "correct-fill" : (item.status === "wrong" ? "wrong-fill" : "");
+            row.innerHTML = `<span class="row-num">${index + 1}.</span> ${item.prefix}<span class="drop-zone ${s5SelectedId === item.id ? 'active' : ''} ${statusClass}">${item.currentVal}</span>${item.suffix}`;
+            row.onclick = () => { if(item.status !== "correct") { s5SelectedId = item.id; loadS5(); }};
+            grid.appendChild(row);
+        });
+        shuffle([...lessonConfig.bodyOptions]).forEach(letter => {
+            let d = document.createElement('div'); d.className = 'letter-card'; d.style.flex = '0 0 15%'; d.innerText = letter.toLowerCase();
+            d.onclick = (e) => {
+                e.stopPropagation();
+                if(!s5SelectedId) return;
+                const current = s5Q.find(i => i.id === s5SelectedId);
+                current.currentVal = letter;
+                current.status = "filled";
+                s5SelectedId = null;
+                if(s5Q.every(i => i.currentVal !== "")) verifyBtn.classList.remove('hidden');
+                loadS5();
+            };
+            bank.appendChild(d);
+        });
+    }
+
+    function verifyS5() {
+        let allCorrect = true;
+        s5Q.forEach(item => {
+            if(item.currentVal === item.missing) item.status = "correct";
+            else { item.status = "wrong"; allCorrect = false; wrongClicks++; }
+        });
+        if(allCorrect) {
+            document.getElementById('s5-verify-btn').classList.add('hidden');
+            document.getElementById('next-stage-btn').classList.remove('hidden');
+        }
+        loadS5();
+    }
+
+    function loadS6() {
+        if(s6Idx >= s6Q.length) { document.getElementById(`s6-area`).classList.add('hidden'); showFinalScore(); return; }
+        const current = s6Q[s6Idx];
+        document.getElementById('s6-hint-image').src = current.img;
+        const slots = document.getElementById('s6-slots'), bank = document.getElementById('s6-bank');
+        let originalWords = current.text.split(" "), build = [];
+        let shuffledWords = shuffle([...originalWords]);
+        const update = () => {
+            slots.innerHTML = ''; bank.innerHTML = '';
+            build.forEach((w, i) => {
+                let d = document.createElement('div'); d.className = 'word-token'; d.innerText = w;
+                d.onclick = () => { shuffledWords.push(w); build.splice(i,1); update(); };
+                slots.appendChild(d);
+            });
+            shuffledWords.forEach((w, i) => {
+                let d = document.createElement('div'); d.className = 'word-token'; d.innerText = w;
+                d.onclick = () => { build.push(w); shuffledWords.splice(i,1); update(); 
+                    if(shuffledWords.length === 0) {
+                        if(build.join(" ") === current.text) { speak(current.text); s6Idx++; setTimeout(loadS6, 1200); } else { wrongClicks++; }
+                    }
+                };
+                bank.appendChild(d);
+            });
+        };
+        update();
+    }
+
+    function showFinalScore() {
+        document.getElementById('header-labels').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        let stars = 5, msg = "EXCELLENT!";
+        if(wrongClicks > 3) { stars = 4; msg = "WELL-DONE!"; }
+        if(wrongClicks > 8) { stars = 3; msg = "GOOD!"; }
+        let starHtml = ""; for(let i=0; i<stars; i++) { starHtml += '<span class="star-icon">★</span>'; }
+        document.getElementById('star-display').innerHTML = starHtml;
+        document.getElementById('score-msg').innerText = msg;
+    }
+
+    function moveNext(first = false) {
+        if(!first) {
+            document.getElementById('next-stage-btn').classList.add('hidden');
+            document.getElementById(`s${currentStage}-area`).classList.add('hidden');
+            currentStage++;
+        }
+        if(currentStage > 6) return;
+        document.getElementById(`s${currentStage}-area`).classList.remove('hidden');
+        const titles = ["", "Stage 1", "Stage 2", "Stage 3", "Stage 4", "Stage 5", "Stage 6"];
+        const instrs = ["", "Find the Letter", "Rhyming Words", "Sight Words", "Read Aloud", "Fill in the Blanks", "Unscramble Sentence"];
+        document.getElementById('stage-text').innerText = titles[currentStage];
+        document.getElementById('instr-text').innerText = instrs[currentStage];
+        if(currentStage === 1) loadS1(); 
+        else if(currentStage === 2) loadS2(); 
+        else if(currentStage === 3) loadS3(); 
+        else if(currentStage === 4) loadS4(); 
+        else if(currentStage === 5) loadS5(); 
+        else if(currentStage === 6) loadS6();
+    }
+</script>
