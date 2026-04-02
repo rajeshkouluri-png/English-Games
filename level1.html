@@ -304,8 +304,12 @@
         let starHtml = ""; for(let i=0; i<stars; i++) { starHtml += '<span class="star-icon">★</span>'; }
         document.getElementById('star-display').innerHTML = starHtml;
         document.getElementById('score-msg').innerText = msg;
+        
+        // AUTOMATION: Beams the calculated English rating silently to the main blog!
+        // NOTE: We are using "autoSaveEnglishScore" to match your english-hub.html listener
+        window.top.postMessage({ type: "autoSaveEnglishScore", stars: stars }, "*");
     }
-
+    
     function moveNext(first = false) {
         if(!first) {
             document.getElementById('next-stage-btn').classList.add('hidden');
