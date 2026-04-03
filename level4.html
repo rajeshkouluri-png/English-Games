@@ -292,7 +292,7 @@
         update();
     }
 
-    function showFinalScore() {
+        function showFinalScore() {
         document.getElementById('header-labels').classList.add('hidden');
         document.getElementById('result-screen').classList.remove('hidden');
         let stars = 5, msg = "EXCELLENT!";
@@ -301,6 +301,9 @@
         let starHtml = ""; for(let i=0; i<stars; i++) { starHtml += '<span class="star-icon">★</span>'; }
         document.getElementById('star-display').innerHTML = starHtml;
         document.getElementById('score-msg').innerText = msg;
+        
+        // ఇది స్కోర్‌ని మెయిన్ బ్లాగ్‌కి పంపిస్తుంది!
+        window.top.postMessage({ type: "autoSaveEnglishScore", stars: stars }, "*");
     }
 
     function moveNext(first = false) {
