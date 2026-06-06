@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alphabet Tracing Lab</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; user-select: none; }
+        body { background: #f0f8ff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .abc-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+            gap: 12px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 850px;
+            margin: auto;
+            border: 2px solid #ddd;
+        }
+
+        .letter-card {
+            background: #ffffff;
+            border: 3px solid #27ae60;
+            border-radius: 12px;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #27ae60;
+            height: 85px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #219150;
+            transition: 0.1s;
+        }
+
+        .letter-card:active { transform: translateY(3px); box-shadow: 0 2px 0 #219150; }
+
+        #abc-modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 25px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            z-index: 1000;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            border: 6px solid #27ae60;
+        }
+
+        #image-container {
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+            overflow: hidden;
+            border-radius: 15px;
+            background: #fff;
+        }
+
+        #modal-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #tracing-area {
+            display: none;
+            margin: 10px auto;
+            background: #fff;
+            border: 2px dashed #ddd;
+            touch-action: none;
+        }
+
+        .btn-row { display: flex; justify-content: space-around; margin-top: 15px; gap: 10px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; font-size: 1rem; flex: 1; text-align: center; text-decoration: none; }
+        .btn-trace { background: #3498db; box-shadow: 0 4px 0 #2980b9; }
+        .btn-close { background: #e74c3c; box-shadow: 0 4px 0 #c0392b; }
+        
+        #exit-system-control { width: 100%; max-width: 850px; margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; }
+        #intermission-timer-banner { background: #ffe082; padding: 10px; font-weight: bold; color: #b78103; text-align: center; border-radius: 8px; width: 100%; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        #exit-game-btn { background: #e0e0e0; color: #a0a0a0; border: none; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; border-radius: 10px; cursor: not-allowed; transition: 0.2s; }
+    </style>
+</head>
+<body>
+
+<div id="exit-system-control">
+    <div id="intermission-timer-banner">
+        Have fun tracing! Learning area opens soon...
+    </div>
+    <button id="exit-game-btn" disabled>
+        Playing... (45s remaining)
+    </button>
+</div>
+
+<div class="abc-container" id="alphabet-grid"></div>
+
+<div id="modal-overlay" onclick="closeModal()" style="background: rgba(0, 0, 0, 0.85); display: none; height: 100%; left: 0px; position: fixed; top: 0px; width: 100%; z-index: 999;"></div>
+
+<div id="abc-modal">
+    <h2 id="modal-letter" style="color: #27ae60; font-size: 3.5rem; margin: 0px;">A</h2>
+    
+    <div id="image-display">
+        <div id="image-container">
+            <img alt="Real Object" id="modal-img" src="" />
+        </div>
+        <p id="modal-word" style="color: #2d3436; font-size: 2rem; font-weight: bold; margin: 10px 0px; text-transform: capitalize;"></p>
+    </div>
+
+    <canvas height="300" id="tracing-area" width="300"></canvas>
+
+    <div class="btn-row">
+        <button class="btn btn-trace" id="trace-btn" onclick="toggleTracing()">Tracing</button>
+        <button class="btn btn-close" onclick="closeModal()">Close</button>
+    </div>
+</div>
+
+<script>
+    const alphabetData = {
+        'A': { word: 'Apple', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEgFqsmZhDKFat5tqOu9-TlwUoupYQnUPL4pM7zZVLn78r6eEk2PlcoXjvzK8k0W76iO76DNAXgrnvlqI_MGGUewQA39d4jdMEeAnpcXVbH4BxmqQ8rgAItIddJczM9RL5muywFTB8sDGrzkXybbbP3WxRNZiHPb_NCj5mXjWwRjSOJDSlvuGTmgAy59yfoi' },
+        'B': { word: 'Ball', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEgTt8guia4nytlRij7uork4GALO_YUB5CHMvAFxcBFXqG_SM5fvoL26MZTc5Xhb2XT36t9dVIYcXH19abPucnZutTZ05njPC3W9urBLfkmfK8BQgXwJs5a11VzHgP3vSpvri9iGXrhvbxxg3QYn_ec4X-VwFJWj93WzqW8bGKCLHYJqEcml3QghmEtM6PZq' },
+        'C': { word: 'Cat', img: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400' },
+        'D': { word: 'Dog', img: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400' },
+        'E': { word: 'Elephant', img: 'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=400' },
+        'F': { word: 'Fish', img: 'https://images.unsplash.com/photo-1524704654690-b56c05c78a00?w=400' },
+        'G': { word: 'Grapes', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEi9gb-RnSbvXxs6Hva9X_UMToqQTBB1RIl7-7Ba_3hyKO2pszAYIIkYP2NbLmtyK64bIzUSvww-S9HvQ15_oXbHp68typ2ziD5zfyuw_RHC6wcUGEa3KZA1r884YpFdTj3HArcOe2x0yW5N9Ivr4C8JuHFlw4upRb-9avdsLa2T_Jz_qTY8TDfuXIU3RZh0' },
+        'H': { word: 'Horse', img: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=400' },
+        'I': { word: 'Ice Cream', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEg7n9D87ZrwJRQPb4YQZEPWl_U42exIIAEL-gMRpFiUxyu-n22YunlKOD8Svxoc6hCjVTM2XpTIQGfdd7g0gMm7zH4avVyBMXBzfcC87XQ_GOfdNS12ab_zW5xAj9onZQan0RoPI1Fh5DVjKKVDjRevwyMZm_Tj09CtM-7Jv-toKxAT3tfG34_6awFnQovf' },
+        'J': { word: 'Jug', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEjC-2tdpxmsP8J4ND598g74_WEEJtdC7Fs7rehpfoiZucUqcxbmiDotwWsARUN7hupbQU8V1atUpzeLnhl6ESAYRXu4vKX4gimtJDW2oFRdE2liRMKju9jk6C-M3Gswj3M_unntSVtdh_YWCHHrXpajyqUC0sYLgGqzLdUCpia10yM3VPpJfiEzHC7Fg7zT' },
+        'K': { word: 'Kite', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEg2rFbeYhSqclZO64DB_yDoBtTXsisH-pxzl58Z1mbvo6aTDZJIhJu2V-ihvLsLHtpFP4dmXywTS2qWRh_AdmHqriOGzfSZ85rn2MWgVZHliECVro82W6y_TIcnMKPoP_v0dYj4-faiC0hfHcpR44FiTGqpnd6ZKSFIrZ7xdOufPDFNJMK5KUuNe9D56ajc' },
+        'L': { word: 'Lion', img: 'https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=400' },
+        'M': { word: 'Monkey', img: 'https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?w=400' },
+        'N': { word: 'Nest', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEgRfrBGS8wFWGaklNf1go0nDudQ3r5aL-z_KhvYHC-kHqDdXcOpl4MVr1MjWJGe25WtpSEQKi9OxQxB6hKy8HQOkPyempo6UiuWQkYxQhmHAq3ZoZpluo13hqjyDCw8w4t4wEQlRKfBrofShK6qeN14ELzonagoUbDY4DCNeCh2k2QxhVd6jAz7tgkeNCqR' },
+        'O': { word: 'Orange', img: 'https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=400' },
+        'P': { word: 'Parrot', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEiUlGJT8LMbUu3gOU98DQUiF5qPpY7JIkcVt9QEGYF3p178e3aBkRJkCohBD-jrQtqk-9jQAeIsU3--1dTS0ffjd6TygEKYqKRzmWIxDXjsYp2thHG8qmbRoDGMwJDwyUh2wKDqq0bA1Yi3og_KJTnq7mvJhcdl8URVenzUQIxrGlQ6K3SVp7WWJ4BKgSmR' },
+        'Q': { word: 'Queen', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEh_baRnpfNteOBG_ZFLCEuOwcON7tghKoq4VPM3NQIsl-EwnJaREgCChgoU0iYgEvJ2l5-UPqI29SRT2V12LXYDU3OZdjbjsuUtjyVpajsRd869KmOpCLtyKkcYPrZwlhz64Gnpfknhlr17vC31a691-UhJIDag5yWJWcjABVnOypeR3DAy7vcSE4Pb-KZA' },
+        'R': { word: 'Rabbit', img: 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400' },
+        'S': { word: 'Sun', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEiiPFlb20CAv6TS750QUgKsW18hnBImjL_ADuMvuZ-X2TvsvcgeFLfHJvKZwFVLTB57fEYvZt8VmimtX_0O9ZtvyfkNlYi3x6OfNDNOCyRzV14kOqMxbUNi7mOrwK_7qL94vGZ7Ji3-dIOlLc50ImXMLBQyv0kFQjT9HR12X7f2EFT7ZMiCshtV_uS-tahN' },
+        'T': { word: 'Tiger', img: 'https://images.unsplash.com/photo-1508817628294-5a453fa0b8fb?w=400' },
+        'U': { word: 'Umbrella', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEhO2ylhmHdvis0TskET6b5Wpq_DBniQplJArrqZzxjt_a_8gkN_4sm_zTQlWR7LtDy_MNMOZTEze2Mq96k_00oT5vF4EfEswX3fOgkQhxBKvWviXfDXhcyV0DsMdodDlm6pY4WvxWG2vKF60blbkyLA48v7R4InFLge7zcP0bNMjIolUqnY3f83tfGUjiqb' },
+        'V': { word: 'Van', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEhkl72QYkUs66CejJzsjZ7UTPxJ7kcjBvPNEfzaBV59UAnInUD8E8V-DgCtT17Es0UZd1UdLnUUEj1d6JbPuHdQPTP_z26O0BcR0n831fBI2KCfUhD_cQ5H2EhOCLHWnCCV0Fqd0-Y_hdaqEAQjabLRKSGW7KY6CwW4etLHxn8ILEQ_vH4UF3je8O2zhAhG' },
+        'W': { word: 'Watch', img: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400' },
+        'X': { word: 'Xylophone', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEiGhNCIYw23vKIMfpBv_9Hy1vA5adT5dclqFHghOR9BEESp_zy0pHkOz1U0EdBJUJF15w9iVI589z-nVMclNc257DwQIc5Js6-sVl2NQkHWixe8O2msi-VUXOGSFIrtrlKFj76FV_IQ7iW8_1fbgb5o1yvdthPSf5cEjTFjUbx-XvOUsr3eu-twjnRvYTKL' },
+        'Y': { word: 'Yak', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEiUc9eL0wORhVzcF2ts863RDzv0ECqj72dkymnrQIKgrv5RzMr21rj_bhgLrY0V-rjcSyBzeKWEHLPa3GdEuB4z-qdCUQhZsLdA1SUXdQHMyKRtA6HTuyIWYN-zhvflSHf8zw3XXmwMjcNEjfXkq3myu0c-9R-qX4EwV-ApcbuHSxPaLoRrz7is_IROiNrF' },
+        'Z': { word: 'Zebra', img: 'https://blogger.googleusercontent.com/img/a/AVvXsEh8QKD2aLILTn4kn_CKIzWQjl5TsL7z-7Q9UHu9FtTy1k1vw4BMdNQFu2zSffO0ye5l9fGtzyuhxi_yMYkbRysgfUX8-FpVYvVtWUKOybMs6c6ykXijalHUEGx5uMVIxTy0i9DqJ05K2mGx9IIrYlj420CnGGJspHgOkiqlvC55k0Aze-VQe3Nt3AC9-OiH' }
+    };
+
+    const grid = document.getElementById('alphabet-grid');
+    const canvas = document.getElementById('tracing-area');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let tracePoints = 0;
+    let confettiFired = false;
+
+    // Build standard layout matrix
+    Object.keys(alphabetData).forEach(letter => {
+        const div = document.createElement('div');
+        div.className = 'letter-card';
+        div.innerText = letter;
+        div.onclick = () => showModal(letter);
+        grid.appendChild(div);
+    });
+
+    function showModal(letter) {
+        const data = alphabetData[letter];
+        document.getElementById('modal-letter').innerText = letter;
+        document.getElementById('modal-word').innerText = data.word;
+        document.getElementById('modal-img').src = data.img;
+        
+        document.getElementById('image-display').style.display = 'block';
+        canvas.style.display = 'none';
+        document.getElementById('trace-btn').innerText = "Tracing";
+        document.getElementById('abc-modal').style.display = 'block';
+        document.getElementById('modal-overlay').style.display = 'block';
+        tracePoints = 0; 
+        confettiFired = false;
+        speakPhonics(letter, data.word);
+    }
+
+    function toggleTracing() {
+        if (canvas.style.display === 'none') {
+            document.getElementById('image-display').style.display = 'none';
+            canvas.style.display = 'block';
+            document.getElementById('trace-btn').innerText = "Show Photo";
+            initTracing(document.getElementById('modal-letter').innerText);
+        } else {
+            document.getElementById('image-display').style.display = 'block';
+            canvas.style.display = 'none';
+            document.getElementById('trace-btn').innerText = "Tracing";
+        }
+    }
+
+    function initTracing(letter) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "bold 240px sans-serif";
+        ctx.strokeStyle = "#f0f0f0";
+        ctx.lineWidth = 4;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.strokeText(letter, canvas.width/2, canvas.height/2);
+    }
+
+    function startDraw(e) { isDrawing = true; ctx.beginPath(); }
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+        const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+        ctx.lineWidth = 18; ctx.lineCap = "round"; ctx.strokeStyle = "#27ae60";
+        ctx.lineTo(x, y); ctx.stroke();
+        
+        tracePoints++;
+        if (tracePoints > 130 && !confettiFired) {
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            confettiFired = true;
+            playEncouragement();
+        }
+    }
+    function stopDraw() { isDrawing = false; }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('touchstart', startDraw);
+    canvas.addEventListener('touchmove', draw);
+    window.addEventListener('touchend', stopDraw);
+
+    function speakPhonics(letter, word) {
+        window.speechSynthesis.cancel();
+        const l = new SpeechSynthesisUtterance(letter);
+        const w = new SpeechSynthesisUtterance("is for " + word);
+        l.rate = 0.5; l.pitch = 1.2; 
+        w.rate = 0.7; w.pitch = 1.1;
+        window.speechSynthesis.speak(l);
+        l.onend = () => { setTimeout(() => window.speechSynthesis.speak(w), 800); };
+    }
+
+    function playEncouragement() {
+        const phrases = ["Great job!", "Excellent!", "Wonderful!", "You did it!"];
+        const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+        const utter = new SpeechSynthesisUtterance(phrase);
+        utter.pitch = 1.3; utter.rate = 0.9;
+        window.speechSynthesis.speak(utter);
+    }
+
+    function closeModal() {
+        document.getElementById('abc-modal').style.display = 'none';
+        document.getElementById('modal-overlay').style.display = 'none';
+        window.speechSynthesis.cancel();
+    }
+
+    /* GATEWAY SYSTEM INTERMISSION TIMER RUNTIME */
+    let secondsLeft = 45;
+    const exitBtn = document.getElementById('exit-game-btn');
+    const banner = document.getElementById('intermission-timer-banner');
+
+    const countdown = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+            clearInterval(countdown);
+            exitBtn.disabled = false;
+            exitBtn.style.background = "#4CAF50";
+            exitBtn.style.color = "white";
+            exitBtn.style.cursor = "pointer";
+            exitBtn.style.boxShadow = "0 4px 0 #388E3C";
+            exitBtn.innerText = "Finish & Open Level 4! ➡️";
+            banner.innerText = "Great job playing! Click below to head back to the Dashboard.";
+            
+            exitBtn.onclick = () => {
+                let completedGames = JSON.parse(localStorage.getItem('completedGames') || "[]");
+                if (!completedGames.includes(1)) {
+                    completedGames.push(1);
+                    localStorage.setItem('completedGames', JSON.stringify(completedGames));
+                }
+                window.location.href = "index.html";
+            };
+        } else {
+            exitBtn.innerText = `Playing... (${secondsLeft}s remaining)`;
+        }
+    }, 1000);
+</script>
+</body>
+</html>
