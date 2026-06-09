@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"></meta>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"></meta>
+    <style>
+        :root {
+            --pond-blue: #4db8ff;
+            --leaf-green: #2ecc71;
+            --deep-water: #2e86c1;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+            margin: 20px auto;
+            background: var(--deep-water);
+            border-radius: 25px;
+            position: relative;
+            overflow: hidden;
+            border: 10px solid #5d4037;
+            font-family: 'Arial Black', Gadget, sans-serif;
+        }
+
+        #pond-world {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        #fish-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .fish {
+            position: absolute;
+            font-size: 20px;
+            opacity: 0.6;
+            transition: transform 0.1s linear;
+            filter: blur(1px);
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            z-index: 100;
+            padding: 0 20px;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        #level-indicator {
+            position: absolute;
+            top: 0;
+            right: 20px;
+            color: white;
+            font-size: 1.1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 110;
+        }
+
+        #sentence-box {
+            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+            font-size: 1.3rem;
+            font-weight: 900; 
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            line-height: 1.4;
+            text-align: center;
+            margin-top: 20px;
+            padding: 0 10px;
+        }
+
+        .highlight { 
+            background: #ffeb3b;
+            color: #000;
+            padding: 2px 10px;
+            border-radius: 10px;
+            border: 2px solid #f39c12;
+            display: inline-block;
+            text-shadow: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        #squirrel {
+            font-size: 50px;
+            position: absolute;
+            bottom: 65px; 
+            left: 50%;
+            transform: translateX(-50%);
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 150;
+        }
+
+        .pond-object {
+            position: absolute;
+            transition: top 1.5s ease-in-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 120px;
+        }
+
+        .leaf-platform {
+            width: 124px;
+            height: 72px;
+            background: var(--leaf-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px #1e8449;
+            color: white;
+            font-family: 'Impact', 'Arial Narrow', sans-serif;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            z-index: 10;
+            text-align: center;
+            padding: 5px;
+            box-sizing: border-box;
+            font-size: 1.1rem;
+            white-space: nowrap;
+        }
+
+        .long-text { font-size: 0.82rem !important; }
+
+        .option-leaf { cursor: pointer; transition: transform 0.2s; }
+        .option-leaf:hover { transform: scale(1.05); }
+
+        .deco-leaf {
+            width: 70px;
+            height: 40px;
+            background: rgba(39, 174, 96, 0.7);
+            border-radius: 50%;
+            z-index: 4;
+        }
+
+        .flower-fixed {
+            position: absolute;
+            font-size: 28px;
+            top: -22px;
+            z-index: 6;
+            pointer-events: none;
+        }
+
+        .overlay {
+            display: flex; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92); color: white; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000;
+            text-align: center; padding: 20px; box-sizing: border-box;
+        }
+
+        .btn {
+            padding: 12px 28px; cursor: pointer; border-radius: 12px; border: none; 
+            background: #2ecc71; color: white; font-weight: bold; font-size: 1.2rem;
+            box-shadow: 0 5px #27ae60; transition: transform 0.1s;
+        }
+
+        .btn:active { transform: translateY(3px); box-shadow: 0 2px #27ae60; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="fish-layer"></div>
+    
+    <div class="overlay" id="intro-overlay">
+        <div style="font-size: 80px; margin-bottom: 10px;">🐿️ <span style="font-size: 40px; vertical-align: middle;">🌊</span> 🏖️</div>
+        <p style="font-size: 1.3rem; font-weight: bold; line-height: 1.5; margin-bottom: 25px;">
+            The squirrel accidentally fell into the pond!<br />
+            Help the squirrel reach the bank<br />
+            by choosing the right leaf.
+        </p>
+        <button class="btn" onclick="startGame()">START JOURNEY</button>
+    </div>
+
+    <div id="ui-layer">
+        <div id="level-indicator">Stage: <span id="lvl-num">1</span></div>
+        <div id="sentence-box"></div>
+    </div>
+
+    <div id="pond-world"></div>
+    <div id="squirrel">🐿️</div>
+
+    <div class="overlay" id="win-overlay" style="display: none;">
+        <div style="font-size: 80px; margin-bottom: 10px;">🐿️🏖️</div>
+        <h2 id="win-title" style="color: #2ecc71; margin: 10px 0;">WELL DONE!</h2>
+        <p style="font-size: 1.1rem; margin-bottom: 25px;">The squirrel is safe at the bank!</p>
+        <button class="btn" id="next-btn" onclick="nextStage()">PLAY NEXT STAGE</button>
+    </div>
+</div>
+
+<script>
+    const stageData = [
+        [ // Stage 1
+            { s: "The <span class='highlight'>brown</span> dog chased the ball.", a: "Adjective", options: ["Adjective", "Noun"] },
+            { s: "They <span class='highlight'>slowly</span> walked to the park.", a: "Adverb", options: ["Adverb", "Verb"] },
+            { s: "A large <span class='highlight'>elephant</span> drank some water.", a: "Noun", options: ["Noun", "Pronoun"] },
+            { s: "<span class='highlight'>She</span> gave a gift to him.", a: "Pronoun", options: ["Pronoun", "Noun"] },
+            { s: "The boy <span class='highlight'>ran</span> across the street.", a: "Verb", options: ["Verb", "Adverb"] },
+            { s: "I want <span class='highlight'>an</span> orange from the bowl.", a: "Article", options: ["Article", "Preposition"] },
+            { s: "Put the keys <span class='highlight'>on</span> the table.", a: "Preposition", options: ["Preposition", "Conjunction"] },
+            { s: "Birds <span class='highlight'>and</span> bees fly in gardens.", a: "Conjunction", options: ["Conjunction", "Article"] }
+        ],
+        [ // Stage 2
+            { s: "The <span class='highlight'>chef</span> cooked a delicious meal.", a: "Noun", options: ["Noun", "Verb"] },
+            { s: "They like tea <span class='highlight'>but</span> hate coffee.", a: "Conjunction", options: ["Conjunction", "Preposition"] },
+            { s: "He hid <span class='highlight'>behind</span> the old wooden door.", a: "Preposition", options: ["Preposition", "Adverb"] },
+            { s: "The <span class='highlight'>shiny</span> car drove very fast.", a: "Adjective", options: ["Adjective", "Noun"] },
+            { s: "The students <span class='highlight'>study</span> in the library.", a: "Verb", options: ["Verb", "Adverb"] },
+            { s: "<span class='highlight'>We</span> watched the sunset last night.", a: "Pronoun", options: ["Pronoun", "Article"] },
+            { s: "The bell rang <span class='highlight'>loudly</span> at noon.", a: "Adverb", options: ["Adverb", "Adjective"] },
+            { s: "I need <span class='highlight'>the</span> blue pen for class.", a: "Article", options: ["Article", "Noun"] }
+        ],
+        [ // Stage 3
+            { s: "A <span class='highlight'>bright</span> moon lit the sky.", a: "Adjective", options: ["Adjective", "Noun"] },
+            { s: "You must <span class='highlight'>wait</span> for the bus.", a: "Verb", options: ["Verb", "Noun"] },
+            { s: "The <span class='highlight'>ocean</span> is deep and blue.", a: "Noun", options: ["Noun", "Adjective"] },
+            { s: "He arrived <span class='highlight'>early</span> for the meeting.", a: "Adverb", options: ["Adverb", "Verb"] },
+            { s: "I saw <span class='highlight'>a</span> bird in the tree.", a: "Article", options: ["Article", "Pronoun"] },
+            { s: "Study hard <span class='highlight'>or</span> you might fail.", a: "Conjunction", options: ["Conjunction", "Preposition"] },
+            { s: "<span class='highlight'>It</span> rained heavily all morning long.", a: "Pronoun", options: ["Pronoun", "Verb"] },
+            { s: "Look <span class='highlight'>under</span> the heavy rug please.", a: "Preposition", options: ["Preposition", "Adverb"] }
+        ],
+        [ // Stage 4
+            { s: "The <span class='highlight'>children</span> played in the garden.", a: "Noun", options: ["Noun", "Verb"] },
+            { s: "Sarah <span class='highlight'>is</span> a very kind girl.", a: "Verb", options: ["Verb", "Adverb"] },
+            { s: "The <span class='highlight'>little</span> kitten drank the milk.", a: "Adjective", options: ["Adjective", "Noun"] },
+            { s: "She spoke <span class='highlight'>softly</span> to the baby.", a: "Adverb", options: ["Adverb", "Verb"] },
+            { s: "He looked <span class='highlight'>through</span> the glass window.", a: "Preposition", options: ["Preposition", "Conjunction"] },
+            { s: "I like cake <span class='highlight'>and</span> sweet icecream.", a: "Conjunction", options: ["Conjunction", "Article"] },
+            { s: "<span class='highlight'>You</span> should eat your green vegetables.", a: "Pronoun", options: ["Pronoun", "Noun"] },
+            { s: "Take <span class='highlight'>an</span> umbrella into the rain.", a: "Article", options: ["Article", "Preposition"] }
+        ],
+        [ // Stage 5
+            { s: "A <span class='highlight'>wild</span> tiger lives in India.", a: "Adjective", options: ["Adjective", "Noun"] },
+            { s: "The <span class='highlight'>teacher</span> wrote on the board.", a: "Noun", options: ["Noun", "Verb"] },
+            { s: "Birds <span class='highlight'>fly</span> high in the sky.", a: "Verb", options: ["Verb", "Noun"] },
+            { s: "They sang <span class='highlight'>happily</span> during the party.", a: "Adverb", options: ["Adverb", "Adjective"] },
+            { s: "Stay <span class='highlight'>inside</span> the house during rain.", a: "Preposition", options: ["Preposition", "Verb"] },
+            { s: "Fish <span class='highlight'>and</span> frogs live in water.", a: "Conjunction", options: ["Conjunction", "Article"] },
+            { s: "<span class='highlight'>They</span> are playing football right now.", a: "Pronoun", options: ["Pronoun", "Noun"] },
+            { s: "Pass <span class='highlight'>the</span> salt to me please.", a: "Article", options: ["Article", "Preposition"] }
+        ]
+    ];
+
+    let currentStageIdx = 0;
+    let currentIdx = 0;
+    let randomizedStages = [];
+    let levelQuestions = [];
+
+    const world = document.getElementById('pond-world');
+    const squirrel = document.getElementById('squirrel');
+    const fishLayer = document.getElementById('fish-layer');
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function startGame() {
+        document.getElementById('intro-overlay').style.display = 'none';
+        randomizedStages = shuffle([...stageData]);
+        currentStageIdx = 0;
+        startStage();
+    }
+
+    function startStage() {
+        levelQuestions = shuffle([...randomizedStages[currentStageIdx]]);
+        currentIdx = 0;
+        document.getElementById('lvl-num').innerText = currentStageIdx + 1;
+        resetSquirrel();
+        spawnWorld();
+    }
+
+    function resetSquirrel() {
+        squirrel.style.transition = "none";
+        squirrel.style.left = "50%";
+        squirrel.style.bottom = "65px";
+        squirrel.innerHTML = "🐿️";
+        setTimeout(() => {
+            squirrel.style.transition = "all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        }, 50);
+    }
+
+    function spawnWorld() {
+        world.innerHTML = '';
+        const q = levelQuestions[currentIdx];
+        document.getElementById('sentence-box').innerHTML = q.s;
+
+        createItem('leaf-platform', 50, 480, null, false);
+
+        const sides = [30, 70].sort(() => Math.random() - 0.5);
+        q.options.forEach((opt, i) => {
+            const isLong = opt.length > 7;
+            createItem('leaf-platform option-leaf' + (isLong ? ' long-text' : ''), sides[i], 280, opt, false);
+        });
+
+        // Decorations
+        let decoCount = 0;
+        let attempts = 0;
+        while (decoCount < 12 && attempts < 50) {
+            const x = Math.random() * 85 + 5;
+            const y = Math.random() * 450 + 50;
+            const isNearStart = (y > 400 && x > 30 && x < 70);
+            const isNearOptions = (y > 200 && y < 350 && (x < 45 || x > 55));
+            const isTooHigh = (y < 130);
+
+            if (!isNearStart && !isNearOptions && !isTooHigh) {
+                createItem('deco-leaf', x, y, null, true);
+                decoCount++;
+            }
+            attempts++;
+        }
+    }
+
+    function createItem(className, xPercent, yPos, label, canHaveFlower) {
+        const container = document.createElement('div');
+        container.className = 'pond-object';
+        container.style.left = `calc(${xPercent}% - 62px)`;
+        container.style.top = yPos + "px";
+
+        const leaf = document.createElement('div');
+        leaf.className = className;
+        if(label) {
+            leaf.innerText = label;
+            leaf.onclick = () => handleJump(label, xPercent);
+        } else if (className === 'deco-leaf') {
+            leaf.style.transform = `scale(${0.6 + Math.random() * 0.6})`;
+            leaf.style.opacity = "0.7";
+        }
+        
+        if(canHaveFlower && Math.random() > 0.4) {
+            const flower = document.createElement('span');
+            flower.className = 'flower-fixed';
+            flower.innerText = Math.random() > 0.5 ? '🪷' : '🌸';
+            container.appendChild(flower);
+        }
+
+        container.appendChild(leaf);
+        world.appendChild(container);
+    }
+
+    function handleJump(choice, targetX) {
+        const correct = levelQuestions[currentIdx].a;
+        if (choice === correct) {
+            squirrel.style.left = targetX + "%";
+            squirrel.style.bottom = "270px"; 
+            setTimeout(() => {
+                squirrel.style.transition = "all 1.5s ease-in-out";
+                document.querySelectorAll('.pond-object').forEach(obj => {
+                    const currentTop = parseInt(obj.style.top);
+                    obj.style.top = (currentTop + 220) + "px";
+                });
+                squirrel.style.bottom = "70px";
+                setTimeout(() => {
+                    currentIdx++;
+                    if (currentIdx >= levelQuestions.length) {
+                        showStageWin();
+                    } else {
+                        resetSquirrel();
+                        spawnWorld();
+                    }
+                }, 1500); 
+            }, 500);
+        } else {
+            squirrel.style.bottom = "30px";
+            squirrel.innerHTML = "🌊";
+            setTimeout(() => location.reload(), 1200);
+        }
+    }
+
+    function showStageWin() {
+        const isGameComplete = currentStageIdx >= randomizedStages.length - 1;
+        document.getElementById('win-title').innerText = isGameComplete ? "GRAMMAR CHAMPION! 👑" : "WELL DONE!";
+        document.getElementById('next-btn').innerText = isGameComplete ? "Restart Adventure" : "PLAY NEXT STAGE";
+        
+        if (isGameComplete) {
+            document.getElementById('next-btn').onclick = () => location.reload();
+        }
+        document.getElementById('win-overlay').style.display = 'flex';
+    }
+
+    function nextStage() {
+        document.getElementById('win-overlay').style.display = 'none';
+        currentStageIdx++;
+        startStage();
+    }
+
+    // Fish background logic
+    const fishIcons = ['🐟', '🐠', '🐡'];
+    function spawnFish() {
+        const fish = document.createElement('div');
+        fish.className = 'fish';
+        fish.innerText = fishIcons[Math.floor(Math.random() * fishIcons.length)];
+        let startLeft = Math.random() > 0.5 ? -50 : 550;
+        let direction = startLeft === -50 ? 1 : -1;
+        fish.style.left = startLeft + 'px';
+        fish.style.top = Math.random() * 500 + 50 + 'px';
+        fish.style.transform = `scaleX(${direction})`;
+        fishLayer.appendChild(fish);
+        let speed = Math.random() * 2 + 1;
+        let pos = startLeft;
+        function move() {
+            pos += speed * direction;
+            fish.style.left = pos + 'px';
+            if ((direction === 1 && pos < 600) || (direction === -1 && pos > -100)) {
+                requestAnimationFrame(move);
+            } else { fish.remove(); }
+        }
+        move();
+    }
+    setInterval(spawnFish, 3000);
+</script>
+
+</body>
+</html>
