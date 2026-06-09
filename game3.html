@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Ladder Race Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #e0f7fa; /* Light blue background for the page */
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper" style="background: rgb(135, 206, 235); border-radius: 20px; border: 8px solid rgb(255, 215, 0); box-shadow: rgba(0, 0, 0, 0.5) 0px 10px 30px; font-family: 'Arial Rounded MT Bold', sans-serif; height: 650px; margin: 0px auto; max-width: 500px; width: 100%; overflow: hidden; position: relative; user-select: none;">
+    
+    <div style="background-attachment: initial; background-clip: initial; background-color: initial; background-origin: initial; background-position: 50% 50%; background-repeat: initial; background-size: cover; background: url('https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?auto=format&amp;fit=crop&amp;w=500&amp;q=80') center center; inset: 0px; position: absolute; z-index: 0;"></div>
+
+    <button id="mute-btn" onclick="toggleMute()" style="background: rgba(255, 255, 255, 0.8); border-radius: 50%; border: none; cursor: pointer; font-size: 20px; height: 40px; position: absolute; right: 10px; top: 10px; width: 40px; z-index: 30;">🔊</button>
+
+    <div style="padding: 20px; position: relative; text-align: center; z-index: 5;">
+        <div style="background: rgb(44, 62, 80); border-radius: 15px; border: 5px solid rgb(255, 255, 255); box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 15px; padding: 15px;">
+            <div style="color: #f1c40f; font-size: 14px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Find the missing letter!</div>
+            <div id="current-word" style="color: white; font-size: 55px; font-weight: bold; letter-spacing: 12px; text-shadow: rgb(0, 0, 0) 3px 3px 0px;">_ _ _</div>
+        </div>
+    </div>
+
+    <div style="display: flex; height: 350px; justify-content: space-around; padding-bottom: 20px; position: relative; z-index: 5;">
+        
+        <div style="background: repeating-linear-gradient(0deg, rgb(139, 69, 19) 0px, rgb(139, 69, 19) 6px, transparent 6px, transparent 45px); border-left: 8px solid rgb(139, 69, 19); border-right: 8px solid rgb(139, 69, 19); height: 100%; position: relative; width: 70px;">
+            <div id="p1" style="bottom: 0px; font-size: 50px; left: 0px; position: absolute; text-align: center; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 100%;">👦</div>
+            <div style="background: rgb(255, 71, 87); border-radius: 5px; color: white; font-size: 10px; font-weight: bold; padding: 2px 0px; position: absolute; text-align: center; top: -10px; width: 100%;">PLAYER 1</div>
+        </div>
+        
+        <div style="background: repeating-linear-gradient(0deg, rgb(139, 69, 19) 0px, rgb(139, 69, 19) 6px, transparent 6px, transparent 45px); border-left: 8px solid rgb(139, 69, 19); border-right: 8px solid rgb(139, 69, 19); height: 100%; position: relative; width: 70px;">
+            <div id="p2" style="bottom: 0px; font-size: 50px; left: 0px; position: absolute; text-align: center; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 100%;">👧</div>
+            <div style="background: rgb(30, 144, 255); border-radius: 5px; color: white; font-size: 10px; font-weight: bold; padding: 2px 0px; position: absolute; text-align: center; top: -10px; width: 100%;">PLAYER 2</div>
+        </div>
+    </div>
+
+    <div style="background: rgba(255, 255, 255, 0.95); border-top: 4px solid rgb(255, 215, 0); display: flex; height: 130px; padding: 10px 0px; position: relative; z-index: 5;">
+        <div style="align-items: center; border-right: 2px solid rgb(221, 221, 221); display: flex; flex: 1 1 0%; justify-content: center; padding: 0px 10px;">
+            <div id="p1-btns" style="display: flex; gap: 8px; justify-content: center; width: 100%;"></div>
+        </div>
+        <div style="align-items: center; display: flex; flex: 1 1 0%; justify-content: center; padding: 0px 10px;">
+            <div id="p2-btns" style="display: flex; gap: 8px; justify-content: center; width: 100%;"></div>
+        </div>
+    </div>
+
+    <div id="win-screen" style="align-items: center; background: rgba(0, 0, 0, 0.9); color: white; display: none; flex-direction: column; inset: 0px; justify-content: center; position: absolute; text-align: center; z-index: 40;">
+        <div style="font-size: 80px; margin-bottom: 10px;">🏆</div>
+        <h2 id="winner-text" style="color: gold; font-size: 32px; margin: 0px 0px 20px;"></h2>
+        <button onclick="resetGame()" style="background: rgb(255, 215, 0); border-radius: 50px; border: none; color: #333333; cursor: pointer; font-size: 20px; font-weight: bold; padding: 15px 40px;">PLAY AGAIN</button>
+    </div>
+</div>
+<script>
+(function() {
+    const wordBankRaw = [
+        { w: "CAT", m: "A", d: "C _ T" }, { w: "BAT", m: "A", d: "B _ T" }, { w: "FAN", m: "A", d: "F _ N" }, { w: "HAT", m: "A", d: "H _ T" },
+        { w: "MAP", m: "A", d: "M _ P" }, { w: "PAN", m: "A", d: "P _ N" }, { w: "RAT", m: "A", d: "R _ T" }, { w: "BAG", m: "A", d: "B _ G" },
+        { w: "HEN", m: "E", d: "H _ N" }, { w: "NET", m: "E", d: "N _ T" }, { w: "PEN", m: "E", d: "P _ N" }, { w: "BED", m: "E", d: "B _ D" },
+        { w: "LEG", m: "E", d: "L _ G" }, { w: "RED", m: "E", d: "R _ D" }, { w: "TEN", m: "E", d: "T _ N" }, { w: "JET", m: "E", d: "J _ T" },
+        { w: "FISH", m: "I", d: "F _ SH" }, { w: "PIG", m: "I", d: "P _ G" }, { w: "BIN", m: "I", d: "B _ N" }, { w: "WIG", m: "I", d: "W _ G" },
+        { w: "SHIP", m: "I", d: "SH _ P" }, { w: "ZIP", m: "I", d: "Z _ P" }, { w: "KID", m: "I", d: "K _ D" }, { w: "PIN", m: "I", d: "P _ N" },
+        { w: "DOG", m: "O", d: "D _ G" }, { w: "BOX", m: "O", d: "B _ X" }, { w: "FOX", m: "O", d: "F _ X" }, { w: "HOT", m: "O", d: "H _ T" },
+        { w: "LOG", m: "O", d: "L _ G" }, { w: "POT", m: "O", d: "P _ T" }, { w: "TOP", m: "O", d: "T _ P" }, { w: "MOP", m: "O", d: "M _ P" },
+        { w: "SUN", m: "U", d: "S _ N" }, { w: "BUS", m: "U", d: "B _ S" }, { w: "CUP", m: "U", d: "C _ P" }, { w: "GUM", m: "U", d: "G _ M" },
+        { w: "MUG", m: "U", d: "M _ G" }, { w: "NUT", m: "U", d: "N _ T" }, { w: "TUB", m: "U", d: "T _ B" }, { w: "BUG", m: "U", d: "B _ G" }
+    ];
+
+    // Child-friendly whimsical music
+    const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); 
+    bgMusic.loop = true;
+    bgMusic.volume = 0.15;
+    
+    const correctSound = new Audio('https://actions.google.com/sounds/v1/cartoon/clime_up_the_ladder.ogg');
+    const wrongSound = new Audio('https://actions.google.com/sounds/v1/cartoon/slide_whistle.ogg');
+    const winSound = new Audio('https://actions.google.com/sounds/v1/cartoon/cheers.ogg');
+
+    let gameWords = [];
+    let currentIdx = 0, p1Pos = 0, p2Pos = 0;
+    const finishLine = 10, vowels = ["A", "E", "I", "O", "U"];
+
+    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+
+    function initGame() {
+        gameWords = shuffle([...wordBankRaw]);
+        currentIdx = 0;
+        updateUI();
+    }
+
+    function updateUI() {
+        const level = gameWords[currentIdx];
+        document.getElementById('current-word').innerText = level.d;
+        const getOpts = () => shuffle([level.m, ...shuffle(vowels.filter(v => v !== level.m)).slice(0, 2)]);
+        renderButtons('p1-btns', getOpts(), 1);
+        renderButtons('p2-btns', getOpts(), 2);
+    }
+
+    function renderButtons(id, opts, player) {
+        const div = document.getElementById(id);
+        div.innerHTML = '';
+        opts.forEach(letter => {
+            const b = document.createElement('button');
+            b.innerText = letter;
+            b.style.cssText = "padding: 15px 0; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 24px; color: white; flex: 1; max-width: 55px; box-shadow: 0 5px 0 rgba(0,0,0,0.2);";
+            b.style.background = (player === 1) ? "#ff4757" : "#1e90ff";
+            b.onclick = () => { if(bgMusic.paused) bgMusic.play(); move(player, letter); };
+            div.appendChild(b);
+        });
+    }
+
+    window.move = function(player, letter) {
+        if (letter === gameWords[currentIdx].m) {
+            correctSound.currentTime = 0; correctSound.play();
+            if (player === 1) p1Pos++; else p2Pos++;
+            currentIdx = (currentIdx + 1) % gameWords.length;
+            updateUI();
+        } else {
+            wrongSound.currentTime = 0; wrongSound.play();
+            if (player === 1) p1Pos = Math.max(0, p1Pos - 1); else p2Pos = Math.max(0, p2Pos - 1);
+        }
+        document.getElementById('p1').style.bottom = (p1Pos * 35) + "px";
+        document.getElementById('p2').style.bottom = (p2Pos * 35) + "px";
+        
+        if (p1Pos >= finishLine || p2Pos >= finishLine) {
+            bgMusic.pause(); winSound.play();
+            document.getElementById('win-screen').style.display = 'flex';
+            document.getElementById('winner-text').innerText = (p1Pos >= finishLine ? "PLAYER 1" : "PLAYER 2") + " WINS!";
+        }
+    };
+
+    window.toggleMute = function() {
+        bgMusic.muted = !bgMusic.muted;
+        document.getElementById('mute-btn').innerText = bgMusic.muted ? "🔇" : "🔊";
+    };
+
+    window.resetGame = function() {
+        p1Pos = 0; p2Pos = 0;
+        document.getElementById('p1').style.bottom = "0px";
+        document.getElementById('p2').style.bottom = "0px";
+        document.getElementById('win-screen').style.display = 'none';
+        initGame();
+    };
+
+    // Start the game immediately
+    initGame();
+})();
+</script>
+
+</body>
+</html>
