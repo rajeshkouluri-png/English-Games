@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Word Puzzle</title>
+    <style>
+      /* --- 1. MAIN CONTAINER --- */
+      .snake-puzzle-container {
+        font-family: 'Segoe UI', 'Verdana', sans-serif;
+        background-color: #fff;
+        border: 4px solid #FFB74D;
+        border-radius: 12px;
+        padding: 10px;
+        max-width: 600px;
+        margin: 0 auto;
+        text-align: center;
+        position: relative;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+
+      /* --- HEADER & NAVIGATION --- */
+      .level-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 0 10px;
+      }
+      
+      .level-indicator {
+        font-size: 18px;
+        font-weight: bold;
+        color: #E65100;
+        background: #FFE0B2;
+        padding: 6px 16px;
+        border-radius: 20px;
+      }
+
+      .nav-btn {
+        background-color: #1976D2;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .nav-btn:hover { background-color: #1565C0; }
+      .nav-btn:disabled {
+        background-color: #CFD8DC;
+        color: #90A4AE;
+        cursor: not-allowed;
+      }
+
+      /* --- 2. GAME BOARD --- */
+      .game-area {
+        position: relative;
+        width: 500px;
+        height: 500px;
+        margin: 40px auto; 
+      }
+
+      /* --- 3. GRID BOXES --- */
+      .grid-cell {
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        background-color: white;
+        border: 2px solid #333;
+        border-radius: 6px;
+        color: black;
+        font-size: 24px;
+        font-weight: 800; /* Extra Bold */
+        text-transform: uppercase;
+        
+        /* Flexbox Centers Text perfectly */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        
+        cursor: pointer;
+        z-index: 100; /* Boxes ABOVE stickers */
+        transition: transform 0.1s, background-color 0.2s;
+      }
+
+      .grid-cell:hover { border-color: #2196F3; }
+
+      .grid-cell.selected {
+        background-color: #FFF9C4;
+        border-color: #FBC02D;
+        transform: scale(1.1);
+        z-index: 200;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      }
+
+      .grid-cell.solved {
+        background-color: #C8E6C9;
+        border-color: #388E3C;
+        color: #1B5E20;
+      }
+
+      /* --- 4. STICKERS --- */
+      .puzzle-icon {
+        position: absolute;
+        font-size: 32px;
+        width: 42px;
+        height: 42px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: white;
+        border: 2px solid #eee;
+        border-radius: 50%;
+        z-index: 1; /* Stickers BELOW boxes */
+        pointer-events: none;
+      }
+
+      /* --- 5. LETTER BANK --- */
+      .keyboard {
+        background-color: #E3F2FD;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 10px;
+      }
+
+      .key-btn {
+        background: white;
+        border: 1px solid #90CAF9;
+        border-radius: 6px;
+        font-size: 18px;
+        font-weight: bold;
+        color: #1565C0;
+        padding: 8px 12px;
+        margin: 4px;
+        cursor: pointer;
+        width: 42px;
+        display: inline-block;
+      }
+      .key-btn:hover { background-color: #2196F3; color: white; }
+
+      .reset-button {
+        background-color: #FF5252;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        font-size: 16px;
+        border-radius: 25px;
+        margin-top: 15px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .reset-button:hover { background-color: #D32F2F; }
+
+      /* --- 6. EFFECTS --- */
+      .confetti-piece {
+        position: absolute;
+        width: 8px; height: 8px;
+        background: gold;
+        z-index: 999;
+        animation: fall 1s linear forwards;
+      }
+      @keyframes fall { 100% { transform: translateY(150px) rotate(360deg); opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+    <div class="snake-puzzle-container" id="mainContainer">
+      
+      <div class="level-header">
+        <button class="nav-btn" id="prevBtn" onclick="changeLevel(-1)">⬅️ Prev</button>
+        <div class="level-indicator" id="levelIndicator">Level 1 of 5</div>
+        <button class="nav-btn" id="nextBtn" onclick="changeLevel(1)">Next ➡️</button>
+      </div>
+
+      <p style="color: #555555; font-size: 14px; margin-top: 0px;">Click a box, then pick a letter!</p>
+
+      <div class="game-area" id="gridArea">
+        </div>
+
+      <div class="keyboard">
+        <div style="color: #0d47a1; font-weight: bold; margin-bottom: 5px;">👇 Select a Letter:</div>
+        <div id="keyboardArea"></div>
+      </div>
+
+      <button class="reset-button" onclick="resetGame()">🔄 Reset Level</button>
+    </div>
+
+    <script>
+    (function() {
+      const cellSize = 50;
+      
+      // --- 1. THE GRID PATH ---
+      const path = [
+        {r:0, c:1}, {r:0, c:2}, {r:0, c:3}, // Word 1 (3 letters)
+        {r:0, c:4}, {r:0, c:5}, {r:0, c:6}, // Word 2 (4 letters)
+        {r:0, c:7}, {r:0, c:8},             // Word 3 (3 letters)
+        {r:1, c:8}, {r:2, c:8}, {r:3, c:8}, {r:4, c:8}, // Word 4 (5 letters)
+        {r:4, c:7}, {r:4, c:6}, {r:4, c:5}, // Word 5 (4 letters)
+        {r:4, c:4}, {r:4, c:3}, {r:4, c:2}, {r:4, c:1}, // Word 6 (5 letters)
+        {r:5, c:1}, {r:6, c:1}, {r:7, c:1}, {r:8, c:1}, // Word 7 (5 letters)
+        {r:8, c:2}, {r:8, c:3}, {r:8, c:4}, // Word 8 (4 letters)
+        {r:8, c:5}, {r:8, c:6}, {r:8, c:7}, {r:8, c:8}  // Word 9 (5 letters)
+      ];
+
+      // --- 2. LEVEL DATA ---
+      const levels = [
+        {
+          id: 1,
+          // HALT is Traffic Light
+          words: ["CAT", "TIME", "EYE", "EARTH", "HALT", "TABLE", "EAGLE", "EARN", "NIGHT"],
+          stickers: ["🐈", "🕒", "👀", "🌍", "🚦", "🪑", "🦅", "💰", "🌙"]
+        },
+        {
+          id: 2,
+          // UPDATED: ANTS -> 🐜🐜
+          words: ["DOG", "GOAT", "TEA", "APPLE", "EGGS", "SHEEP", "PIZZA", "ANTS", "SNAKE"],
+          stickers: ["🐕", "🐐", "🍵", "🍎", "🥚🥚", "🐑", "🍕", "🐜🐜", "🐍"]
+        },
+        {
+          id: 3,
+          words: ["KEY", "YEAR", "RED", "DRESS", "SOAP", "PLANT", "TIGER", "RING", "GREEN"],
+          stickers: ["🔑", "📅", "🔴", "👗", "🧼", "🌱", "🐯", "💍", "🟢"]
+        },
+        {
+          id: 4,
+          // TEXT is Speech Bubble
+          words: ["VAN", "NOSE", "EGG", "GRASS", "SLOW", "WATER", "ROBOT", "TEXT", "TRAIN"],
+          stickers: ["🚐", "👃", "🥚", "🌾", "🐌", "💧", "🤖", "💬", "🚂"]
+        },
+        {
+          id: 5,
+          // UPDATED: FRUIT -> 🍓
+          words: ["CAR", "RICE", "EAR", "ROBOT", "TOYS", "SHEEP", "PAPER", "ROOF", "FRUIT"],
+          stickers: ["🚗", "🍚", "👂", "🤖", "🧸🪀", "🐑", "📄", "🏠", "🍓"]
+        }
+      ];
+
+      // --- 3. STATE ---
+      let currentLevelIdx = 0;
+      let selectedIndex = null;
+      let currentWordObjects = [];
+
+      const gridArea = document.getElementById('gridArea');
+      const keyboardArea = document.getElementById('keyboardArea');
+      const mainContainer = document.getElementById('mainContainer');
+      const levelIndicator = document.getElementById('levelIndicator');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+
+      // --- 4. INITIALIZATION ---
+      function initLevel(levelIndex) {
+        let levelData = levels[levelIndex];
+        levelIndicator.innerText = `Level ${levelData.id} of 5`;
+        
+        prevBtn.disabled = (levelIndex === 0);
+        nextBtn.disabled = (levelIndex === levels.length - 1);
+
+        gridArea.innerHTML = '';
+        keyboardArea.innerHTML = '';
+        selectedIndex = null;
+
+        renderStickers(levelData.stickers);
+
+        path.forEach((pos, index) => {
+          let cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          cell.id = 'cell-' + index;
+          cell.style.top = (pos.r * cellSize) + 'px';
+          cell.style.left = (pos.c * cellSize) + 'px';
+          cell.onclick = function() { selectCell(index); };
+          gridArea.appendChild(cell);
+        });
+
+        // Map Path Indices to Words
+        currentWordObjects = [
+          { name: levelData.words[0], indexes: [0,1,2], solved: false },
+          { name: levelData.words[1], indexes: [2,3,4,5], solved: false },
+          { name: levelData.words[2], indexes: [5,6,7], solved: false },
+          { name: levelData.words[3], indexes: [7,8,9,10,11], solved: false },
+          { name: levelData.words[4], indexes: [11,12,13,14], solved: false },
+          { name: levelData.words[5], indexes: [14,15,16,17,18], solved: false },
+          { name: levelData.words[6], indexes: [18,19,20,21,22], solved: false },
+          { name: levelData.words[7], indexes: [22,23,24,25], solved: false },
+          { name: levelData.words[8], indexes: [25,26,27,28,29], solved: false }
+        ];
+
+        // Generate Letters
+        let allChars = levelData.words.join("").split("");
+        allChars.sort(() => Math.random() - 0.5);
+        let uniqueChars = [...new Set(allChars)].sort();
+        
+        uniqueChars.forEach(char => {
+          let btn = document.createElement('button');
+          btn.className = 'key-btn';
+          btn.innerText = char;
+          btn.onclick = function() { fillCell(char); };
+          keyboardArea.appendChild(btn);
+        });
+      }
+
+      function renderStickers(stickers) {
+        const positions = [
+          { top: -50, left: 55 },   // 1
+          { top: -50, left: 155 },  // 2
+          { top: -50, left: 305 },  // 3
+          { top: -50, left: 405 },  // 4
+          { top: 260, left: 430 },  // 5 (Heat position)
+          { top: 150, left: 255 },  // 6
+          { top: 200, left: 5 },    // 7 (Eagle position)
+          { top: 455, left: 55 },   // 8
+          { top: 455, left: 205 }   // 9 (Night position)
+        ];
+
+        stickers.forEach((emoji, i) => {
+          let div = document.createElement('div');
+          div.className = 'puzzle-icon';
+          div.innerText = emoji;
+          div.style.top = positions[i].top + 'px';
+          div.style.left = positions[i].left + 'px';
+          gridArea.appendChild(div);
+        });
+      }
+
+      // --- 5. GAME ACTIONS ---
+      window.changeLevel = function(dir) {
+        currentLevelIdx += dir;
+        initLevel(currentLevelIdx);
+      }
+
+      window.resetGame = function() {
+        initLevel(currentLevelIdx);
+      }
+
+      function selectCell(idx) {
+        if (selectedIndex !== null) {
+          document.getElementById('cell-' + selectedIndex).classList.remove('selected');
+        }
+        selectedIndex = idx;
+        document.getElementById('cell-' + idx).classList.add('selected');
+      }
+
+      function fillCell(char) {
+        if (selectedIndex === null) {
+          alert("Please tap a box in the puzzle first!");
+          return;
+        }
+
+        let cell = document.getElementById('cell-' + selectedIndex);
+        cell.innerText = char;
+        
+        validateWords();
+
+        let nextIdx = selectedIndex + 1;
+        if (nextIdx < path.length) {
+          selectCell(nextIdx);
+        }
+      }
+
+      function validateWords() {
+        currentWordObjects.forEach(w => {
+          let currentString = "";
+          let isComplete = true;
+          let cellElements = [];
+
+          w.indexes.forEach(idx => {
+            let el = document.getElementById('cell-' + idx);
+            if (!el || !el.innerText) isComplete = false;
+            if (el) {
+              currentString += el.innerText;
+              cellElements.push(el);
+            }
+          });
+
+          if (isComplete && currentString === w.name) {
+            // Turn green regardless of previous state
+            cellElements.forEach(el => el.classList.add('solved'));
+            
+            // Only fire confetti ONCE per word
+            if (!w.solved) {
+               w.solved = true;
+               let lastEl = cellElements[cellElements.length - 1];
+               spawnConfetti(lastEl);
+            }
+          }
+        });
+      }
+
+      function spawnConfetti(targetElement) {
+        if(!targetElement) return;
+        let rect = targetElement.getBoundingClientRect();
+        let containerRect = mainContainer.getBoundingClientRect();
+        let top = rect.top - containerRect.top;
+        let left = rect.left - containerRect.left;
+
+        const colors = ['#F44336', '#4CAF50', '#2196F3', '#FFEB3B'];
+        for(let i=0; i<20; i++) {
+          let conf = document.createElement('div');
+          conf.className = 'confetti-piece';
+          conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          conf.style.top = (top + 20) + 'px';
+          conf.style.left = (left + 20) + 'px';
+          let x = (Math.random() - 0.5) * 100;
+          let y = Math.random() * 100 + 50;
+          conf.style.transform = `translate(${x}px, ${y}px)`;
+          mainContainer.appendChild(conf);
+          setTimeout(() => conf.remove(), 1000);
+        }
+      }
+
+      // Start
+      initLevel(currentLevelIdx);
+
+    })();
+    </script>
+</body>
+</html>
