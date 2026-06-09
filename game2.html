@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Surprise Box</title>
+    <style>
+      /* --- 1. MAIN CONTAINER --- */
+      #game-container {
+        font-family: 'Verdana', sans-serif; /* Clean font */
+        text-align: center;
+        background-color: #f4faff;
+        border: 4px solid #3a86ff;
+        border-radius: 20px;
+        padding: 20px;
+        max-width: 600px;
+        margin: 0 auto;
+        position: relative;
+        user-select: none;
+        overflow: hidden;
+      }
+
+      h2 { color: #3a86ff; margin-top: 0; }
+
+      /* --- 2. THE CSS BOX (Drawn with code, not an emoji) --- */
+      #scene {
+        position: relative;
+        height: 220px; /* Space for letter to fly up */
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        margin-bottom: 20px;
+      }
+
+      /* The Box Body */
+      .box-body {
+        width: 100px;
+        height: 80px;
+        background: linear-gradient(to bottom, #ff9e00, #ff6d00);
+        border: 3px solid #e65100;
+        border-radius: 0 0 10px 10px;
+        position: relative;
+        z-index: 10;
+      }
+      
+      /* The Ribbon on the body */
+      .box-body::after {
+        content: '';
+        position: absolute;
+        left: 40px;
+        width: 20px;
+        height: 100%;
+        background-color: #ff006e;
+        border-left: 2px solid #a80048;
+        border-right: 2px solid #a80048;
+      }
+
+      /* The Lid */
+      .box-lid {
+        width: 110px;
+        height: 25px;
+        background-color: #ff9e00;
+        border: 3px solid #e65100;
+        border-radius: 5px;
+        position: absolute;
+        bottom: 80px; /* Sits on top of body */
+        left: -8px; /* Center it relative to body */
+        transform-origin: bottom left; /* HINGE point */
+        transition: transform 0.4s ease-in-out;
+        z-index: 12;
+      }
+
+      /* The Ribbon on the Lid */
+      .box-lid::after {
+        content: '';
+        position: absolute;
+        left: 45px;
+        width: 20px;
+        height: 100%;
+        background-color: #ff006e;
+        border-left: 2px solid #a80048;
+        border-right: 2px solid #a80048;
+      }
+
+      /* CLASS TO OPEN THE LID */
+      .lid-open {
+        transform: rotate(110deg); /* Flips the lid open */
+      }
+
+      /* --- 3. THE LETTER --- */
+      #popped-letter {
+        font-size: 100px;
+        font-weight: 900;
+        color: #3a86ff;
+        position: absolute;
+        bottom: 20px; /* Starts hidden Inside box */
+        left: 50%;
+        transform: translateX(-50%) scale(0.5);
+        opacity: 0;
+        z-index: 5; /* Initially behind box */
+        text-shadow: 3px 3px 0px #fff;
+        transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy effect */
+      }
+
+      /* Class to make letter fly up */
+      .letter-visible {
+        bottom: 110px !important; /* Moves HIGH above box */
+        opacity: 1 !important;
+        transform: translateX(-50%) scale(1.2) !important;
+        z-index: 11 !important; /* Moves in front of box back, behind front */
+      }
+
+      /* --- 4. GLITTER & EFFECTS --- */
+      .star-particle {
+        position: absolute;
+        font-size: 20px;
+        pointer-events: none;
+        animation: blastOut 1s forwards;
+      }
+
+      @keyframes blastOut {
+        0% { transform: scale(0) translate(0, 0); opacity: 1; }
+        100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
+      }
+
+      .shake-box { animation: shake 0.5s; }
+      @keyframes shake {
+        0% { transform: rotate(0deg); }
+        25% { transform: rotate(5deg); }
+        50% { transform: rotate(-5deg); }
+        75% { transform: rotate(5deg); }
+        100% { transform: rotate(0deg); }
+      }
+
+      /* --- 5. UI ELEMENTS --- */
+      #blast-btn {
+        background-color: #3a86ff;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        font-size: 20px;
+        font-weight: bold;
+        border-radius: 30px;
+        cursor: pointer;
+        box-shadow: 0 5px #1e5bb8;
+      }
+      #blast-btn:active { transform: translateY(3px); box-shadow: 0 2px #1e5bb8; }
+
+      #options-container {
+        display: none;
+        margin-top: 25px;
+        gap: 15px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .flashcard {
+        background: white;
+        border: 3px solid #ddd;
+        border-radius: 12px;
+        padding: 10px;
+        width: 130px;
+        cursor: pointer;
+        transition: 0.2s;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      .flashcard:hover { transform: scale(1.05); border-color: #3a86ff; }
+      .card-emoji { font-size: 45px; display: block; }
+      .card-word { font-size: 18px; font-weight: bold; color: #333; }
+
+      #feedback {
+        margin-top: 15px;
+        font-size: 22px;
+        font-weight: bold;
+        min-height: 35px;
+        color: #333;
+      }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+      <h2>🎁 Magic Surprise Box 🎁</h2>
+      
+      <div id="scene">
+        <div id="glitter-zone" style="bottom: 100px; height: 0px; left: 50%; position: absolute; width: 0px;"></div>
+
+        <div id="popped-letter">A</div>
+
+        <div id="box-wrapper">
+          <div class="box-body">
+            <div class="box-lid" id="lid"></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="blast-btn" onclick="blastBox()">💥 BLAST!</button>
+
+      <div id="feedback"></div>
+      <div id="options-container"></div>
+    </div>
+
+    <script>
+      // --- DATA ---
+      const gameData = [
+        { letter: "A", correct: {word: "Apple", icon: "🍎"}, wrong: {word: "Banana", icon: "🍌"} },
+        { letter: "B", correct: {word: "Ball", icon: "⚽"}, wrong: {word: "Car", icon: "🚗"} },
+        { letter: "C", correct: {word: "Cat", icon: "🐱"}, wrong: {word: "Dog", icon: "🐶"} },
+        { letter: "D", correct: {word: "Dog", icon: "🐶"}, wrong: {word: "Egg", icon: "🥚"} },
+        { letter: "E", correct: {word: "Elephant", icon: "🐘"}, wrong: {word: "Fish", icon: "🐟"} },
+        { letter: "F", correct: {word: "Fish", icon: "🐟"}, wrong: {word: "Grapes", icon: "🍇"} },
+        { letter: "G", correct: {word: "Grapes", icon: "🍇"}, wrong: {word: "Hat", icon: "🎩"} },
+        { letter: "H", correct: {word: "House", icon: "🏠"}, wrong: {word: "Ice Cream", icon: "🍦"} },
+        { letter: "I", correct: {word: "Ice Cream", icon: "🍦"}, wrong: {word: "Juice", icon: "🧃"} },
+        { letter: "J", correct: {word: "Juice", icon: "🧃"}, wrong: {word: "Kite", icon: "🪁"} },
+        { letter: "K", correct: {word: "Kite", icon: "🪁"}, wrong: {word: "Lemon", icon: "🍋"} },
+        { letter: "L", correct: {word: "Lion", icon: "🦁"}, wrong: {word: "Mouse", icon: "🐭"} },
+        { letter: "M", correct: {word: "Monkey", icon: "🐵"}, wrong: {word: "Nose", icon: "👃"} },
+        { letter: "N", correct: {word: "Nose", icon: "👃"}, wrong: {word: "Octopus", icon: "🐙"} },
+        { letter: "O", correct: {word: "Orange", icon: "🍊"}, wrong: {word: "Pizza", icon: "🍕"} },
+        { letter: "P", correct: {word: "Pizza", icon: "🍕"}, wrong: {word: "Queen", icon: "👑"} },
+        { letter: "Q", correct: {word: "Queen", icon: "👑"}, wrong: {word: "Rabbit", icon: "🐰"} },
+        { letter: "R", correct: {word: "Rainbow", icon: "🌈"}, wrong: {word: "Sun", icon: "☀️"} },
+        { letter: "S", correct: {word: "Sun", icon: "☀️"}, wrong: {word: "Tree", icon: "🌳"} },
+        { letter: "T", correct: {word: "Tree", icon: "🌳"}, wrong: {word: "Umbrella", icon: "☂️"} },
+        { letter: "U", correct: {word: "Umbrella", icon: "☂️"}, wrong: {word: "Violin", icon: "🎻"} },
+        { letter: "V", correct: {word: "Violin", icon: "🎻"}, wrong: {word: "Watch", icon: "⌚"} },
+        { letter: "W", correct: {word: "Watermelon", icon: "🍉"}, wrong: {word: "Xylophone", icon: "🎼"} },
+        { letter: "X", correct: {word: "Xylophone", icon: "🎼"}, wrong: {word: "Yo-Yo", icon: "🪀"} },
+        { letter: "Y", correct: {word: "Yo-Yo", icon: "🪀"}, wrong: {word: "Zebra", icon: "🦓"} },
+        { letter: "Z", correct: {word: "Zebra", icon: "🦓"}, wrong: {word: "Apple", icon: "🍎"} }
+      ];
+
+      let currentItem = null;
+      const synth = window.speechSynthesis;
+
+      function blastBox() {
+        // 1. Reset
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('options-container').style.display = 'none';
+        const letterEl = document.getElementById('popped-letter');
+        const lidEl = document.getElementById('lid');
+        const boxWrapper = document.getElementById('box-wrapper');
+
+        // Close Lid & Hide Letter first
+        lidEl.classList.remove('lid-open');
+        letterEl.classList.remove('letter-visible');
+
+        // 2. Data
+        currentItem = gameData[Math.floor(Math.random() * gameData.length)];
+        letterEl.innerText = currentItem.letter;
+
+        // 3. Shake Box
+        boxWrapper.classList.add('shake-box');
+
+        // 4. ACTION (after shake)
+        setTimeout(() => {
+          boxWrapper.classList.remove('shake-box');
+          
+          // Open Lid
+          lidEl.classList.add('lid-open');
+          
+          // Pop Letter
+          letterEl.classList.add('letter-visible');
+
+          // 💥 BLAST GLITTER EFFECT
+          createBlastGlitter();
+
+          // Audio
+          speakText("The letter is " + currentItem.letter);
+
+          // Show Cards
+          setTimeout(() => showOptions(), 1200);
+        }, 500);
+      }
+
+      function createBlastGlitter() {
+        const zone = document.getElementById('glitter-zone');
+        const colors = ['gold', 'yellow', 'white', '#ffeb3b'];
+        
+        // Create 20 particles
+        for(let i=0; i<20; i++) {
+          let star = document.createElement('div');
+          star.innerText = "✨";
+          star.className = "star-particle";
+          star.style.color = colors[Math.floor(Math.random()*colors.length)];
+          
+          // Random direction (tx, ty)
+          let tx = (Math.random() - 0.5) * 200 + "px"; // Left/Right spread
+          let ty = (Math.random() * -150) - 50 + "px"; // Upward spread
+          
+          star.style.setProperty('--tx', tx);
+          star.style.setProperty('--ty', ty);
+          
+          zone.appendChild(star);
+          
+          // Remove after animation
+          setTimeout(() => star.remove(), 1000);
+        }
+      }
+
+      function showOptions() {
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        container.style.display = 'flex';
+
+        let options = [currentItem.correct, currentItem.wrong];
+        options.sort(() => Math.random() - 0.5);
+
+        options.forEach(opt => {
+          let card = document.createElement('div');
+          card.className = 'flashcard';
+          card.innerHTML = `<span class="card-emoji">${opt.icon}</span><span class="card-word">${opt.word}</span>`;
+          let isCorrect = (opt.word === currentItem.correct.word);
+          card.onclick = () => checkAnswer(isCorrect, opt.word);
+          container.appendChild(card);
+        });
+      }
+
+      function checkAnswer(isCorrect, word) {
+        const feedback = document.getElementById('feedback');
+
+        if (isCorrect) {
+          feedback.style.color = "green";
+          feedback.innerText = "Correct! " + currentItem.letter + " is for " + word;
+          
+          // EXACT PHRASE REQUESTED
+          speakText("Correct. " + currentItem.letter + " is for " + word);
+          
+          // Winner Sprinkles
+          createBlastGlitter(); // Extra glitter for winning
+
+        } else {
+          feedback.style.color = "red";
+          feedback.innerText = "Try again!";
+          speakText("Try again.");
+        }
+      }
+
+      function speakText(text) {
+        if (synth.speaking) return;
+        const utterThis = new SpeechSynthesisUtterance(text);
+        utterThis.rate = 0.9;
+        synth.speak(utterThis);
+      }
+    </script>
+</body>
+</html>
