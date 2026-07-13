@@ -147,7 +147,7 @@
     // Check if the code is running inside Kodular
     if (typeof window.AppInventor !== "undefined") {
         // Send a message to Kodular using the WebViewString
-        window.AppInventor.setWebViewString("SPEAK:" + t);
+        window.AppInventor.setWebViewString("SPEAK_ENG:" + t);
     } else {
         // Fallback for Google Blogger / Standard Browsers
         window.speechSynthesis.cancel(); 
