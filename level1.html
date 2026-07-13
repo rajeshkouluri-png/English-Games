@@ -141,7 +141,21 @@
     let s1Q, s2Q, s3Q, s4Q, s5Q, s6Q, wrongClicks = 0, voiceTarget = "";
 
     function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
-    function speak(t) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.rate = 0.8; voiceTarget = t; window.speechSynthesis.speak(u); }
+    function speak(t) { 
+    voiceTarget = t; 
+    
+    // Check if the code is running inside Kodular
+    if (typeof window.AppInventor !== "undefined") {
+        // Send a message to Kodular using the WebViewString
+        window.AppInventor.setWebViewString("SPEAK:" + t);
+    } else {
+        // Fallback for Google Blogger / Standard Browsers
+        window.speechSynthesis.cancel(); 
+        const u = new SpeechSynthesisUtterance(t); 
+        u.rate = 0.8; 
+        window.speechSynthesis.speak(u); 
+    }
+}
     function replayAudio() { speak(voiceTarget); }
 
     window.onload = () => { document.getElementById('start-title').innerText = lessonConfig.title; };
