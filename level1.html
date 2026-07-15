@@ -224,18 +224,40 @@
         document.getElementById('read-feedback').innerText = "";
     }
 
+    // 1. The Trigger Function
     function startReadingAI() {
-        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if(!Speech) return alert("Browser not supported.");
-        const rec = new Speech();
-        rec.onstart = () => document.getElementById('mic-btn').style.opacity = "0.5";
-        rec.onresult = (e) => {
-            let say = e.results[0][0].transcript.toLowerCase();
-            let target = s4Q[s4Idx].toLowerCase().replace(/[.!]/g,"");
-            if(say.includes(target) || target.includes(say)) { document.getElementById('read-feedback').innerText = "Correct! 🌟"; s4Idx++; setTimeout(loadS4, 1000); }
-        };
-        rec.onend = () => document.getElementById('mic-btn').style.opacity = "1";
-        rec.start();
+        // Check if running inside Kodular
+        if (typeof window.AppInventor !== "undefined") {
+            // Tell Kodular to open the native microphone
+            window.AppInventor.setWebViewString("START_MIC");
+        } else {
+            // Fallback for Google Blogger / Standard Web Browsers
+            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!Speech) return alert("Browser not supported.");
+            const rec = new Speech();
+            rec.onstart = () => document.getElementById('mic-btn').style.opacity = "0.5";
+            rec.onresult = (e) => {
+                // Send what the browser heard to our new checking function
+                checkReadingAnswer(e.results[0][0].transcript);
+            };
+            rec.onend = () => document.getElementById('mic-btn').style.opacity = "1";
+            rec.start();
+        }
+    }
+
+    // 2. The Verification Function
+    // This receives the spoken text from either Kodular or the Browser
+    function checkReadingAnswer(spokenText) {
+        let say = spokenText.toLowerCase();
+        let target = s4Q[s4Idx].toLowerCase().replace(/[.!]/g,"");
+        
+        if(say.includes(target) || target.includes(say)) { 
+            document.getElementById('read-feedback').innerText = "Correct! 🌟"; 
+            s4Idx++; 
+            setTimeout(loadS4, 1000); 
+        } else {
+            document.getElementById('read-feedback').innerText = "Try again!";
+        }
     }
 
     function loadS5() {
