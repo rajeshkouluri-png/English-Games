@@ -223,8 +223,7 @@
         document.getElementById('read-display').innerText = s4Q[s4Idx];
         document.getElementById('read-feedback').innerText = "";
     }
-
-    // 1. The Trigger Function
+   // 1. The Trigger Function
     function startReadingAI() {
         // Check if running inside Kodular
         if (typeof window.AppInventor !== "undefined") {
@@ -246,20 +245,20 @@
     }
 
     // 2. The Verification Function
-    // This receives the spoken text from either Kodular or the Browser
     function checkReadingAnswer(spokenText) {
-        let say = spokenText.toLowerCase();
-        let target = s4Q[s4Idx].toLowerCase().replace(/[.!]/g,"");
+        // Added .trim() here to remove extra spaces
+        let say = spokenText.toLowerCase().trim();
+        let target = s4Q[s4Idx].toLowerCase().replace(/[.!]/g,"").trim();
         
         if(say.includes(target) || target.includes(say)) { 
             document.getElementById('read-feedback').innerText = "Correct! 🌟"; 
             s4Idx++; 
             setTimeout(loadS4, 1000); 
         } else {
-            document.getElementById('read-feedback').innerText = "Try again!";
+            // Changed this line so you can see exactly what the phone heard!
+            document.getElementById('read-feedback').innerText = "Heard: '" + spokenText + "' - Try again!";
         }
     }
-
     function loadS5() {
         const grid = document.getElementById('english-body-grid');
         const bank = document.getElementById('s5-letter-bank');
