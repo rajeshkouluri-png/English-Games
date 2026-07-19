@@ -223,27 +223,25 @@
         document.getElementById('read-display').innerText = s4Q[s4Idx];
         document.getElementById('read-feedback').innerText = "";
     }
-   // 1. The Trigger Function
-    function startReadingAI() {
-        // Check if running inside Kodular
-        if (typeof window.AppInventor !== "undefined") {
-            // Tell Kodular to open the native microphone
-            window.AppInventor.setWebViewString("START_MIC");
-        } else {
-            // Fallback for Google Blogger / Standard Web Browsers
-            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if(!Speech) return alert("Browser not supported.");
-            const rec = new Speech();
-            rec.onstart = () => document.getElementById('mic-btn').style.opacity = "0.5";
-            rec.onresult = (e) => {
-                // Send what the browser heard to our new checking function
-                checkReadingAnswer(e.results[0][0].transcript);
-            };
-            rec.onend = () => document.getElementById('mic-btn').style.opacity = "1";
-            rec.start();
-        }
+  function startReadingAI() {
+    // Check if running inside Kodular
+    if (typeof window.AppInventor !== "undefined") {
+        // FIX: Add Date.now() so the string is ALWAYS unique!
+        // Kodular will see a change every time the button is clicked.
+        window.AppInventor.setWebViewString("START_MIC:" + Date.now());
+    } else {
+        // Fallback for Google Blogger / Standard Web Browsers
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(!Speech) return alert("Browser not supported.");
+        const rec = new Speech();
+        rec.onstart = () => document.getElementById('mic-btn').style.opacity = "0.5";
+        rec.onresult = (e) => {
+            checkReadingAnswer(e.results[0][0].transcript);
+        };
+        rec.onend = () => document.getElementById('mic-btn').style.opacity = "1";
+        rec.start();
     }
-
+}
     // 2. The Verification Function
     function checkReadingAnswer(spokenText) {
         // Added .trim() here to remove extra spaces
