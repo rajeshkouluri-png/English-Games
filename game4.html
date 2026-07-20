@@ -12,7 +12,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f4fce8; /* Light green background for the page */
+            background-color: #f4fce8;
         }
     </style>
 </head>
@@ -51,6 +51,7 @@
         <button onclick="location.reload()" style="background: rgb(149, 165, 166); border-radius: 5px; border: none; color: white; cursor: pointer; font-weight: bold; padding: 8px 20px;">MENU</button>
     </div>
 </div>
+
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -72,23 +73,38 @@ let isDragging = false, marbles = [], foundPositions = [];
 let striker = { x: 225, y: 580, r: 24, vx: 0, vy: 0, active: false };
 let dragPoint = { x: 225, y: 580 }, audioInterval;
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// FIX 1: Safely load AudioContext only when needed so it doesn't crash the WebView
+let audioCtx = null;
 function playHitSound() {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain); 
+        gain.connect(audioCtx.destination);
+        osc.start(); 
+        osc.stop(audioCtx.currentTime + 0.1);
+    } catch (e) {
+        console.log("Audio not supported in this WebView.");
+    }
 }
 
+// FIX 2: Added Kodular Bridge for Speech
 function speak(text) {
-    window.speechSynthesis.cancel();
-    let msg = new SpeechSynthesisUtterance(text);
-    msg.rate = 0.85;
-    window.speechSynthesis.speak(msg);
+    if (typeof window.AppInventor !== "undefined") {
+        window.AppInventor.setWebViewString("SPEAK_ENG:" + text);
+    } else {
+        window.speechSynthesis.cancel();
+        let msg = new SpeechSynthesisUtterance(text);
+        msg.rate = 0.85;
+        window.speechSynthesis.speak(msg);
+    }
 }
 
 function selectCategory(cat) {
@@ -156,14 +172,24 @@ function resetStriker() {
     striker.x = 225; striker.y = 580; striker.vx = 0; striker.vy = 0; striker.active = false;
 }
 
-// --- INPUT LOGIC ---
+// FIX 3: Bulletproof Touch Coordinate Extraction for Mobile WebViews
 function getCanvasPos(e) {
     const rect = canvas.getBoundingClientRect();
-    // Use scaling ratio to get correct coordinates if canvas scales down in CSS
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    let cx = 0, cy = 0;
+    if (e.touches && e.touches.length > 0) {
+        cx = e.touches[0].clientX;
+        cy = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+        cx = e.changedTouches[0].clientX;
+        cy = e.changedTouches[0].clientY;
+    } else {
+        cx = e.clientX;
+        cy = e.clientY;
+    }
+    
     return { 
         x: (cx - rect.left) * scaleX, 
         y: (cy - rect.top) * scaleY 
@@ -180,8 +206,10 @@ const handleStart = (e) => {
 };
 
 const handleMove = (e) => { 
-    if (isDragging) dragPoint = getCanvasPos(e); 
-    if (isDragging && e.cancelable) e.preventDefault(); 
+    if (isDragging) {
+        dragPoint = getCanvasPos(e); 
+        if (e.cancelable) e.preventDefault(); 
+    }
 };
 
 const handleEnd = () => {
@@ -193,12 +221,14 @@ const handleEnd = () => {
     }
 };
 
+// FIX 4: Attached touchmove safely to document to prevent mobile drag breaking
 canvas.addEventListener('mousedown', handleStart);
-window.addEventListener('mousemove', handleMove);
-window.addEventListener('mouseup', handleEnd);
+document.addEventListener('mousemove', handleMove);
+document.addEventListener('mouseup', handleEnd);
+
 canvas.addEventListener('touchstart', handleStart, { passive: false });
-window.addEventListener('touchmove', handleMove, { passive: false });
-window.addEventListener('touchend', handleEnd);
+document.addEventListener('touchmove', handleMove, { passive: false });
+document.addEventListener('touchend', handleEnd);
 
 function update() {
     if (striker.active) {
