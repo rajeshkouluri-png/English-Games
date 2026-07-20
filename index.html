@@ -754,6 +754,24 @@
   function showLoading(show) { document.getElementById("loading").style.display = show ? "block" : "none"; }
   
   showLoading(false);
+  // Listen for data coming BACK from Kodular
+  window.addEventListener("WebViewStringChange", function() {
+      if (typeof window.AppInventor !== "undefined") {
+          let incomingData = window.AppInventor.getWebViewString();
+          
+          // Check if the incoming data is our speech result
+          if (incomingData.startsWith("MIC_RESULT:")) {
+              // Remove the prefix to isolate the spoken word
+              let spokenText = incomingData.replace("MIC_RESULT:", "");
+              
+              // Beam the spoken word DOWN into the iframe game
+              let gameIframe = document.getElementById("game-iframe").contentWindow;
+              if (gameIframe) {
+                  gameIframe.postMessage({ type: "KODULAR_MIC_RESULT", text: spokenText }, "*");
+              }
+          }
+      }
+  });
 </script>
 </body>
 </html>
