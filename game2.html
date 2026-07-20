@@ -7,32 +7,32 @@
     <style>
       /* --- 1. MAIN CONTAINER --- */
       #game-container {
-        font-family: 'Verdana', sans-serif; /* Clean font */
+        font-family: 'Verdana', sans-serif;
         text-align: center;
         background-color: #f4faff;
         border: 4px solid #3a86ff;
         border-radius: 20px;
         padding: 20px;
+        padding-bottom: 40px; /* Added padding so cards don't hit the bottom */
         max-width: 600px;
         margin: 0 auto;
         position: relative;
         user-select: none;
-        overflow: hidden;
+        /* REMOVED overflow: hidden; so mobile screens don't cut off the cards! */
       }
 
       h2 { color: #3a86ff; margin-top: 0; }
 
-      /* --- 2. THE CSS BOX (Drawn with code, not an emoji) --- */
+      /* --- 2. THE CSS BOX --- */
       #scene {
         position: relative;
-        height: 220px; /* Space for letter to fly up */
+        height: 220px; 
         display: flex;
         justify-content: center;
         align-items: flex-end;
         margin-bottom: 20px;
       }
 
-      /* The Box Body */
       .box-body {
         width: 100px;
         height: 80px;
@@ -43,7 +43,6 @@
         z-index: 10;
       }
       
-      /* The Ribbon on the body */
       .box-body::after {
         content: '';
         position: absolute;
@@ -55,7 +54,6 @@
         border-right: 2px solid #a80048;
       }
 
-      /* The Lid */
       .box-lid {
         width: 110px;
         height: 25px;
@@ -63,14 +61,13 @@
         border: 3px solid #e65100;
         border-radius: 5px;
         position: absolute;
-        bottom: 80px; /* Sits on top of body */
-        left: -8px; /* Center it relative to body */
-        transform-origin: bottom left; /* HINGE point */
+        bottom: 80px; 
+        left: -8px; 
+        transform-origin: bottom left; 
         transition: transform 0.4s ease-in-out;
         z-index: 12;
       }
 
-      /* The Ribbon on the Lid */
       .box-lid::after {
         content: '';
         position: absolute;
@@ -82,9 +79,8 @@
         border-right: 2px solid #a80048;
       }
 
-      /* CLASS TO OPEN THE LID */
       .lid-open {
-        transform: rotate(110deg); /* Flips the lid open */
+        transform: rotate(110deg); 
       }
 
       /* --- 3. THE LETTER --- */
@@ -93,21 +89,20 @@
         font-weight: 900;
         color: #3a86ff;
         position: absolute;
-        bottom: 20px; /* Starts hidden Inside box */
+        bottom: 20px; 
         left: 50%;
         transform: translateX(-50%) scale(0.5);
         opacity: 0;
-        z-index: 5; /* Initially behind box */
+        z-index: 5; 
         text-shadow: 3px 3px 0px #fff;
-        transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy effect */
+        transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
       }
 
-      /* Class to make letter fly up */
       .letter-visible {
-        bottom: 110px !important; /* Moves HIGH above box */
+        bottom: 110px !important; 
         opacity: 1 !important;
         transform: translateX(-50%) scale(1.2) !important;
-        z-index: 11 !important; /* Moves in front of box back, behind front */
+        z-index: 11 !important; 
       }
 
       /* --- 4. GLITTER & EFFECTS --- */
@@ -145,6 +140,7 @@
         box-shadow: 0 5px #1e5bb8;
       }
       #blast-btn:active { transform: translateY(3px); box-shadow: 0 2px #1e5bb8; }
+      #blast-btn:disabled { background-color: #a0c4ff; cursor: not-allowed; box-shadow: none; transform: none; }
 
       #options-container {
         display: none;
@@ -201,7 +197,6 @@
     </div>
 
     <script>
-      // --- DATA ---
       const gameData = [
         { letter: "A", correct: {word: "Apple", icon: "🍎"}, wrong: {word: "Banana", icon: "🍌"} },
         { letter: "B", correct: {word: "Ball", icon: "⚽"}, wrong: {word: "Car", icon: "🚗"} },
@@ -232,9 +227,23 @@
       ];
 
       let currentItem = null;
-      const synth = window.speechSynthesis;
+
+      // --- NEW SPEAK TEXT FUNCTION BUILT FOR KODULAR ---
+      function speakText(text) {
+          if (typeof window.AppInventor !== "undefined") {
+              window.AppInventor.setWebViewString("SPEAK_ENG:" + text);
+          } else {
+              window.speechSynthesis.cancel();
+              const utterThis = new SpeechSynthesisUtterance(text);
+              utterThis.rate = 0.9;
+              window.speechSynthesis.speak(utterThis);
+          }
+      }
 
       function blastBox() {
+        const blastBtn = document.getElementById('blast-btn');
+        blastBtn.disabled = true; // Disable button so they don't spam it
+
         // 1. Reset
         document.getElementById('feedback').innerText = "";
         document.getElementById('options-container').style.display = 'none';
@@ -270,7 +279,10 @@
           speakText("The letter is " + currentItem.letter);
 
           // Show Cards
-          setTimeout(() => showOptions(), 1200);
+          setTimeout(() => {
+              showOptions();
+              blastBtn.disabled = false; // Turn button back on once animation finishes
+          }, 1200);
         }, 500);
       }
 
@@ -324,7 +336,7 @@
           feedback.style.color = "green";
           feedback.innerText = "Correct! " + currentItem.letter + " is for " + word;
           
-          // EXACT PHRASE REQUESTED
+          // Audio
           speakText("Correct. " + currentItem.letter + " is for " + word);
           
           // Winner Sprinkles
@@ -335,13 +347,6 @@
           feedback.innerText = "Try again!";
           speakText("Try again.");
         }
-      }
-
-      function speakText(text) {
-        if (synth.speaking) return;
-        const utterThis = new SpeechSynthesisUtterance(text);
-        utterThis.rate = 0.9;
-        synth.speak(utterThis);
       }
     </script>
 </body>
