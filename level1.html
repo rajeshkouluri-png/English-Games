@@ -363,4 +363,11 @@
         else if(currentStage === 5) loadS5(); 
         else if(currentStage === 6) loadS6();
     }
+    // Listen for the mic result being beamed DOWN from the main index.html dashboard
+    window.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "KODULAR_MIC_RESULT") {
+            // Trigger the check answer function!
+            checkReadingAnswer(event.data.text);
+        }
+    });
 </script>
