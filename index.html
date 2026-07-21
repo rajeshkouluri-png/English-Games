@@ -281,6 +281,7 @@
   let englishUnlockedLevel = 0; 
   let englishStarsData = {}; 
   let playingLevel = 0; 
+  let lastScoreUpdateDate = null; // Stores the specific date when the score last changed
   
   let currentAuthMode = 'new';
   let adminDataCache = []; 
@@ -295,24 +296,24 @@
       
       let returnBtn = document.getElementById("finish-return-btn");
       returnBtn.className = "close-btn blink-btn";
-      
-      // ADD THIS LINE: Change the text once the score is received
       returnBtn.innerHTML = "Return to Map ➡️"; 
 
       let earnedStars = event.data.stars;
-      // ... the rest of your saving code stays exactly the same
-      
       englishStarsData[playingLevel] = earnedStars;
       
       if (playingLevel === englishUnlockedLevel && englishUnlockedLevel <= 12) {
           englishUnlockedLevel++; 
       }
 
+      // Record the exact time the score was updated locally
+      let currentDate = new Date();
+      lastScoreUpdateDate = currentDate;
+
       const studentDocRef = doc(db, "students", currentDocId);
       await setDoc(studentDocRef, {
         englishUnlockedLevel: englishUnlockedLevel,
         englishStars: englishStarsData,
-        lastPlayedEnglish: new Date()
+        lastPlayedEnglish: currentDate // Save the exact date to Firebase
       }, { merge: true });
 
       generateMap(); 
@@ -346,12 +347,15 @@
           alert("A student with this name is already enrolled in English! Please click 'Already Enrolled' to login.");
           showLoading(false); return;
         } else {
+          let currentDate = new Date();
+          lastScoreUpdateDate = currentDate; // Set the fresh date
+          
           await setDoc(studentDocRef, { 
               studentName: currentName, 
               schoolName: currentSchool, 
               englishUnlockedLevel: 0, 
               englishStars: {}, 
-              lastPlayedEnglish: new Date() 
+              lastPlayedEnglish: currentDate 
           }, { merge: true });
           
           englishUnlockedLevel = 0; 
@@ -365,6 +369,13 @@
           const data = studentData.data();
           englishUnlockedLevel = data.englishUnlockedLevel !== undefined ? data.englishUnlockedLevel : 0;
           englishStarsData = data.englishStars || {};
+          
+          // Retrieve the specific last played date from Firebase
+          if (data.lastPlayedEnglish) {
+              lastScoreUpdateDate = data.lastPlayedEnglish.toDate ? data.lastPlayedEnglish.toDate() : new Date(data.lastPlayedEnglish);
+          } else {
+              lastScoreUpdateDate = new Date(); // Fallback if missing
+          }
           
           if(data.englishUnlockedLevel === undefined) {
              await setDoc(studentDocRef, { englishUnlockedLevel: 0, englishStars: {} }, { merge: true });
@@ -541,6 +552,9 @@
       return true;
     });
 
+    // Sort students descending by lessons played first, then descending by total stars
+    filteredData.sort((a, b) => b.lessonsPlayed - a.lessonsPlayed || b.totalStars - a.totalStars);
+
     if (document.getElementById("chart-view-container").style.display === "block") {
         renderChart(filteredData);
     }
@@ -662,27 +676,21 @@
     document.getElementById("btn-toggle-chart").innerHTML = "📈 Cumulative Chart"; document.getElementById("btn-select-mode").style.display = "inline-block";
   }
 
-  // Create a variable to hold the timer
   let gameUnlockTimer;
 
   window.openGameLevel = function(levelIdentifier) {
     playingLevel = levelIdentifier;
     let returnBtn = document.getElementById("finish-return-btn");
     
-    // Lock the return button immediately when any game opens
     returnBtn.className = "close-btn dull-btn";
     
-    // Define our Practice Games (All 6 are here)
     const practiceGames = [0, "game1", "game2", "game3", "game4", "game5", "game6"];
     let isPracticeGame = practiceGames.includes(levelIdentifier);
     let filename = "";
 
-    // Routing logic: Find the right filename
     if (isPracticeGame) {
-        // If it's 0 or "game1", load game1.html. Otherwise, load the specific game name.
         filename = (levelIdentifier === 0 || levelIdentifier === "game1") ? "game1.html" : `${levelIdentifier}.html`;
     } else {
-        // It is a Main Level (1-12)
         filename = `level${levelIdentifier}.html`;
     }
     
@@ -690,14 +698,11 @@
     
     document.getElementById("game-iframe").src = gameUrl;
     document.getElementById("game-overlay").style.display = "block"; 
-    document.body.style.overflow = "hidden"; // Locks background scrolling
+    document.body.style.overflow = "hidden";
 
-    // Clear any previous timers just in case
     clearTimeout(gameUnlockTimer);
 
-    // --- THE FIX: Conditional Unlocking ---
     if (isPracticeGame) {
-        // SCENARIO A: Practice Games get the 60-second timer
         returnBtn.innerHTML = "Playing... (Wait 60s)"; 
         
         gameUnlockTimer = setTimeout(() => {
@@ -707,8 +712,6 @@
             }
         }, 60000); 
     } else {
-        // SCENARIO B: Main Levels (1-12) DO NOT get the timer. 
-        // They must wait for the score to unlock the button.
         returnBtn.innerHTML = "Finish Level to Return ➡️";
     }
   }
@@ -719,26 +722,24 @@
     playingLevel = 0;
     document.body.style.overflow = "auto";
     
-    // Clear the timer when the game is closed
     clearTimeout(gameUnlockTimer);
   }
 
   window.openCertificate = function() {
     document.getElementById("cert-display-name").innerHTML = currentName;
     document.getElementById("cert-display-school").innerHTML = currentSchool;
-    let today = new Date().toLocaleDateString('en-GB');
-    document.getElementById("cert-display-date").innerHTML = today;
+    
+    // Utilize the saved specific update date instead of generating today's date
+    let displayDate = lastScoreUpdateDate ? lastScoreUpdateDate.toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+    document.getElementById("cert-display-date").innerHTML = displayDate;
 
     let totalStars = 0;
-    // Calculate only main levels 1 through 12
     for (let i = 1; i <= 12; i++) { 
         if (englishStarsData[i]) totalStars += englishStarsData[i]; 
     }
     
-    // Update to 60 stars max
     document.getElementById("cert-display-score").innerHTML = totalStars + " / 60 ⭐";
 
-    // Update percentage to divide by 60
     let pct = (totalStars / 60) * 100;
     let feedback = "";
     if (pct >= 90) feedback = "Outstanding Achievement! You are an English Master! 🥇";
@@ -754,11 +755,10 @@
   function showLoading(show) { document.getElementById("loading").style.display = show ? "block" : "none"; }
   
   showLoading(false);
-  // This function is triggered directly by Kodular's Evaluate JS
+  
   window.relayToIframe = function(spokenText) {
       let gameIframe = document.getElementById("game-iframe").contentWindow;
       if (gameIframe) {
-          // Beam the word down into the game
           gameIframe.postMessage({ type: "KODULAR_MIC_RESULT", text: spokenText }, "*");
       }
   };
